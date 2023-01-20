@@ -1,11 +1,6 @@
-from assimulo.explicit_ode import Explicit_ODE
 from assimulo.solvers.sundials import CVode
-from assimulo.ode import *
+from assimulo.ode import Explicit_Problem
 import numpy as np
-import matplotlib.pyplot as mpl
-
-import numpy as np
-
 
 
 def f(t, y):
@@ -16,9 +11,9 @@ def f(t, y):
 starting_point = np.array([1,1,1,1])
 problem = Explicit_Problem(f, y0=starting_point)
 
-
 for k in [0, 0.1, 0.5, 1, 5, 10, 50, 100, 500, 1000]:
     problem.name=f"Task 1, k={k}"
     problem_cvode = CVode(problem)
     problem_cvode.simulate(10.0, 100)
     problem_cvode.plot()
+    
