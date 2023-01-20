@@ -6,7 +6,7 @@ import numpy as np
 def f(t, y):
     # k=1
     lam = k * (np.sqrt(y[0]**2+y[1]**2) - 1)/np.sqrt(y[0]**2+y[1]**2)
-    return np.asarray([y[2], y[3], -y[0]*lam, -y[1]*lam -1])
+    return np.asarray([y[2], y[3], -y[0]*lam, -y[1]*lam - 1])
 
 
 starting_point = np.array([1, 1, 1, 1])
