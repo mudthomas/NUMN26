@@ -53,27 +53,46 @@ class BDF_3(Explicit_ODE):
         return t_np1, y_np1
 
     def BDF2step(self, t_n, y_n, y_nm1, h):
-        t_np1 = t_n + h
-        y_np1 = y_n
-        for i in range(self.maxit):
-            y_np1_old = y_np1
-            y_np1 = (4*y_n - 1*y_nm1 + 2*h*self.problem.rhs(t_np1, y_np1))/3
+        return self.BDFstep_general(t_n, [y_n, y_nm1], [4, -1, 2], 3, h)
+        # t_np1 = t_n + h
+        # y_np1 = y_n
+        # for i in range(self.maxit):
+        #     y_np1_old = y_np1
+        #     y_np1 = (4*y_n - 1*y_nm1 + 2*h*self.problem.rhs(t_np1, y_np1))/3
 
-            if(np.norm(y_np1-y_np1_old)) < self.tol:
-                return t_np1, y_np1
-        else:
-            raise Explicit_ODE_Exception
+        #     if(np.norm(y_np1-y_np1_old)) < self.tol:
+        #         return t_np1, y_np1
+        # else:
+        #     raise Explicit_ODE_Exception
 
     def BDF3step(self, t_n, y_n, y_nm1, y_nm2):
+        return self.BDFstep_general(t_n, [y_n, y_nm1, y_nm2], [18, -9, 2, 6], 11, h)
+        # t_np1 = t_n + h
+        # y_np1 = y_n
+        # for i in range(self.maxit):
+        #     y_np1_old = y_np1
+        #     y_np1 = (18*y_n - 9*y_nm1 + 2*y_nm2 + 6*h*self.problem.rhs(t_np1, y_np1))/11
+        #     if(np.norm(y_np1-y_np1_old)) < self.tol:
+        #         return t_np1, y_np1
+        # else:
+        #     raise Explicit_ODE_Exception
+
+    def BDFstep_general(self, t_n, Y, multipliers, divisor, h):
         t_np1 = t_n + h
-        y_np1 = y_n
+        y_np1 = Y[0]
         for i in range(self.maxit):
             y_np1_old = y_np1
-            y_np1 = (18*y_n - 9*y_nm1 + 2*y_nm2 + 6*h*self.problem.rhs(t_np1, y_n))/11
+            y_np1 = multipliers[-1]*self.problem.rhs(t_np1, y_np1)
+            for i in range(len(Y)-1):
+                alpha_i = multipliers[i]
+                y_i =  Y[i]
+                y_np1 += alpha_i * Y[i]
+            y_np1 /= divisor
+
             if(np.norm(y_np1-y_np1_old)) < self.tol:
                 return t_np1, y_np1
         else:
-            raise Explicit_ODE_Exception
+            raise Explicit_ODE_Exceptions
 
 
 class BDF_4(Explicit_ODE):
@@ -113,34 +132,54 @@ class BDF_4(Explicit_ODE):
         return t_np1, y_np1
 
     def BDF2step(self, t_n, y_n, y_nm1, h):
-        t_np1 = t_n + h
-        y_np1 = y_n
-        for i in range(self.maxit):
-            y_np1_old = y_np1
-            y_np1 = (4*y_n - 1*y_nm1 + 2*h*self.problem.rhs(t_np1, y_np1))/3
+        return self.BDFstep_general(t_n, [y_n, y_nm1], [4, -1, 2], 3, h)
+        # t_np1 = t_n + h
+        # y_np1 = y_n
+        # for i in range(self.maxit):
+        #     y_np1_old = y_np1
+        #     y_np1 = (4*y_n - 1*y_nm1 + 2*h*self.problem.rhs(t_np1, y_np1))/3
 
-            if(np.norm(y_np1-y_np1_old)) < self.tol:
-                return t_np1, y_np1
-        else:
-            raise Explicit_ODE_Exception
+        #     if(np.norm(y_np1-y_np1_old)) < self.tol:
+        #         return t_np1, y_np1
+        # else:
+        #     raise Explicit_ODE_Exception
 
     def BDF3step(self, t_n, y_n, y_nm1, y_nm2):
-        t_np1 = t_n + h
-        y_np1 = y_n
-        for i in range(self.maxit):
-            y_np1_old = y_np1
-            y_np1 = (18*y_n - 9*y_nm1 + 2*y_nm2 + 6*h*self.problem.rhs(t_np1, y_np1))/11
-            if(np.norm(y_np1-y_np1_old)) < self.tol:
-                return t_np1, y_np1
-        else:
-            raise Explicit_ODE_Exception
+        return self.BDFstep_general(t_n, [y_n, y_nm1, y_nm2], [18, -9, 2, 6], 11, h)
+        # t_np1 = t_n + h
+        # y_np1 = y_n
+        # for i in range(self.maxit):
+        #     y_np1_old = y_np1
+        #     y_np1 = (18*y_n - 9*y_nm1 + 2*y_nm2 + 6*h*self.problem.rhs(t_np1, y_np1))/11
+        #     if(np.norm(y_np1-y_np1_old)) < self.tol:
+        #         return t_np1, y_np1
+        # else:
+        #     raise Explicit_ODE_Exception
 
     def BDF4step(self, t_n, y_n, y_nm1, y_nm2, y_nm3, h):
+        return self.BDFstep_general(t_n, [y_n, y_nm1, y_nm2, y_nm3], [48, -36, 16, -3, 12], 25, h)
+        # t_np1 = t_n + h
+        # y_np1 = y_n
+        # for i in range(self.maxit):
+        #     y_np1_old = y_np1
+        #     y_np1 = (48*y_n - 36*y_nm1 + 16*y_nm2 - 3*y_nm3 + 12*h*self.problem.rhs(t_np1, y_np1))/25
+        #     if(np.norm(y_np1-y_np1_old)) < self.tol:
+        #         return t_np1, y_np1
+        # else:
+        #     raise Explicit_ODE_Exceptions
+
+    def BDFstep_general(self, t_n, Y, multipliers, divisor, h):
         t_np1 = t_n + h
-        y_np1 = y_n
+        y_np1 = Y[0]
         for i in range(self.maxit):
             y_np1_old = y_np1
-            y_np1 = (48*y_n - 36*y_nm1 + 16*y_nm2 - 3*y_nm3 + 12*h*self.problem.rhs(t_np1, y_np1))/25
+            y_np1 = multipliers[-1]*self.problem.rhs(t_np1, y_np1)
+            for i in range(len(Y)-1):
+                alpha_i = multipliers[i]
+                y_i =  Y[i]
+                y_np1 += alpha_i * Y[i]
+            y_np1 /= divisor
+
             if(np.norm(y_np1-y_np1_old)) < self.tol:
                 return t_np1, y_np1
         else:
