@@ -26,7 +26,7 @@ class BDF_3(Explicit_ODE):
     def __init__(self, problem):
         Explicit_ODE.__init__(self, problem)
         self.maxsteps = 500
-        self.maxit = 10000
+        self.maxit = 100
         self.tol = 1.e-8
 
     def integrate(self, t, y, tf, opts):
@@ -67,7 +67,7 @@ class BDF_3(Explicit_ODE):
             if(np.linalg.norm(y_np1-y_np1_old)) < self.tol:
                 return t_np1, y_np1
         else:
-            raise Explicit_ODE_Exception
+            raise Explicit_ODE_Exception(f"Corrector could not converge within {i} iterations")
 
     def BDF3step(self, t_n, y_n, y_nm1, y_nm2, h):
         t_np1 = t_n + h
@@ -79,7 +79,7 @@ class BDF_3(Explicit_ODE):
             if(np.linalg.norm(y_np1-y_np1_old)) < self.tol:
                 return t_np1, y_np1
         else:
-            raise Explicit_ODE_Exception
+            raise Explicit_ODE_Exception(f"Corrector could not converge within {i} iterations")
 
     def BDFstep_general(self, t_n, Y, multipliers, divisor, h):
         t_np1 = t_n + h
@@ -99,7 +99,7 @@ class BDF_3(Explicit_ODE):
             if(np.linalg.norm(y_np1-y_np1_old)) < self.tol:
                 return t_np1, y_np1
         else:
-            raise Explicit_ODE_Exception('Corrector could not converge within % iterations'%i)
+            raise Explicit_ODE_Exception(f"Corrector could not converge within {i} iterations")
 
 
 class BDF_4(Explicit_ODE):
@@ -142,62 +142,38 @@ class BDF_4(Explicit_ODE):
         return t_np1, y_np1
 
     def BDF2step(self, t_n, y_n, y_nm1, h):
-        t_np1 = t_n + h
-        y_np1 = y_n
-        for i in range(self.maxit):
-            y_np1_old = y_np1
-            temp_func = lambda y: (4*y_n - 1*y_nm1 + 2*h*self.problem.rhs(t_np1, y))/3 -y
-            y_np1 = fsolve(temp_func, y_n)
-            if(np.linalg.norm(y_np1-y_np1_old)) < self.tol:
-                return t_np1, y_np1
-        else:
-            raise Explicit_ODE_Exception
+        return self.BDFstep_general(t_n, [y_n, y_nm1], [4, -1, 2, 3], h)
 
     def BDF3step(self, t_n, y_n, y_nm1, y_nm2, h):
-        t_np1 = t_n + h
-        y_np1 = y_n
-        for i in range(self.maxit):
-            y_np1_old = y_np1
-            temp_func = lambda y: (18*y_n - 9*y_nm1 + 2*y_nm2 + 6*h*self.problem.rhs(t_np1, y))/11 - y
-            y_np1 = fsolve(temp_func, y_n)
-            if(np.linalg.norm(y_np1-y_np1_old)) < self.tol:
-                return t_np1, y_np1
-        else:
-            raise Explicit_ODE_Exception
+        return self.BDFstep_general(t_n, [y_n, y_nm1, y_nm2], [18, -9, 2, 6, 11], h)
 
     def BDF4step(self, t_n, y_n, y_nm1, y_nm2, y_nm3, h):
-        t_np1 = t_n + h
-        y_np1 = y_n
-        for i in range(self.maxit):
-            y_np1_old = y_np1
-            temp_func = lambda y: (48*y_n - 36*y_nm1 + 16*y_nm2 - 3*y_nm3 + 12*h*self.problem.rhs(t_np1, y))/25 - y
-            y_np1 = fsolve(temp_func, y_n)
-            if(np.linalg.norm(y_np1-y_np1_old)) < self.tol:
-                return t_np1, y_np1
-        else:
-            raise Explicit_ODE_Exception('Corrector could not converge within % iterations'%i)
+        return self.BDFstep_general(t_n, [y_n, y_nm1, y_nm2, y_nm3], [48, -36, 16, -3, 12, 25], h)
 
-    def BDFstep_general(self, t_n, Y, multipliers, divisor, h):
+    def BDFstep_general(self, t_n, Y, multipliers, h):
         t_np1 = t_n + h
         y_np1 = Y[0]
         for i in range(self.maxit):
             y_np1_old = y_np1
             clump = 0
-            for i in range(len(Y)-1):
+            for i in range(len(Y)):
                 clump += multipliers[i] * Y[i]
-            temp_func = lambda y: (clump + multipliers[-1]*self.problem.rhs(t_np1, y))/divisor -y
+            temp_func = lambda y: -multipliers[-1]*y + (clump + multipliers[-2]*h*self.problem.rhs(t_np1, y))
             y_np1 = fsolve(temp_func, Y[0])
 
             if(np.linalg.norm(y_np1-y_np1_old)) < self.tol:
                 return t_np1, y_np1
         else:
-            raise Explicit_ODE_Exception('Corrector could not converge within % iterations'%i)
+            raise Explicit_ODE_Exception(f"Corrector could not converge within {i} iterations")
+
+
 
 
 starting_point = np.array([1, 0, 0, -1])
 problem = Explicit_Problem(f, y0=starting_point)
 
-for k in [0, 0.1, 0.5, 1, 5, 10, 50, 100, 500, 1000]:
+# for k in [0, 0.1, 0.5, 1, 5, 10, 50, 100, 500, 1000]:
+for k in [0, 1, 10, 100, 1000]:
     problem.name = f"Task 1, k={k}"
     solver = BDF_4(problem)
     solver.simulate(10.0, 100)
