@@ -28,7 +28,7 @@ class BDF_3(Explicit_ODE):
         self.maxit = 100
         self.tol = 1.e-8
 
-    def integrate(self, t0, tf, y0):
+    def integrate(self, t0, tf, y0, h):
         t_list = [t0]
         y_list = [y0]
         # one step EE
@@ -46,7 +46,7 @@ class BDF_3(Explicit_ODE):
             t, y = self.BDF3step(t, y_list[-1], y_list[-2], y_list[-3], h)
             t_list.append(t)
             y_list.append(y)
-        pass
+        return t_list, y_list
 
     def EEstep(self, t_n, y_n, h):
         t_np1 = t_n + h
@@ -85,9 +85,7 @@ class BDF_3(Explicit_ODE):
             y_np1_old = y_np1
             y_np1 = multipliers[-1]*self.problem.rhs(t_np1, y_np1)
             for i in range(len(Y)-1):
-                alpha_i = multipliers[i]
-                y_i =  Y[i]
-                y_np1 += alpha_i * Y[i]
+                y_np1 += multipliers[i] * Y[i]
             y_np1 /= divisor
 
             if(np.norm(y_np1-y_np1_old)) < self.tol:
@@ -103,7 +101,7 @@ class BDF_4(Explicit_ODE):
         self.maxit = 100
         self.tol = 1.e-8
 
-    def integrate(self, t0, tf, y0):
+    def integrate(self, t0, tf, y0, h):
         t_list = [t0]
         y_list = [y0]
         # one step EE
@@ -125,7 +123,7 @@ class BDF_4(Explicit_ODE):
             t, y = self.BDF4step(t, y_list[-1], y_list[-2], y_list[-3], y_list[-4], h)
             t_list.append(t)
             y_list.append(y)
-        pass
+        return t_list, y_list
 
     def EEstep(self, t_n, y_n, h):
         t_np1 = t_n + h
@@ -176,9 +174,7 @@ class BDF_4(Explicit_ODE):
             y_np1_old = y_np1
             y_np1 = multipliers[-1]*self.problem.rhs(t_np1, y_np1)
             for i in range(len(Y)-1):
-                alpha_i = multipliers[i]
-                y_i =  Y[i]
-                y_np1 += alpha_i * Y[i]
+                y_np1 += multipliers[i] * Y[i]
             y_np1 /= divisor
 
             if(np.norm(y_np1-y_np1_old)) < self.tol:
