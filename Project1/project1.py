@@ -1,6 +1,7 @@
 from assimulo.solvers.sundials import CVode
 from assimulo.ode import Explicit_Problem
 from assimulo.explicit_ode import Explicit_ODE
+from assimulo.ode import Explicit_ODE_Exceptions
 
 import numpy as np
 
