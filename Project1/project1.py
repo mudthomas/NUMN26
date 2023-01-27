@@ -83,10 +83,6 @@ class BDF_general(Explicit_ODE):
 
 
 class BDF_general_newton(BDF_general):
-    maxsteps = 500
-    maxit = 1000
-    tol = 1.e-8
-
     def BDFstep_general_internal(self, t_n, Y, coeffs, h):
         t_np1 = t_n + h
         y_np1 = Y[0]
@@ -135,16 +131,6 @@ class BDF_4_newton(BDF_general_newton):
         BDF_general.__init__(self, problem, 4)
 
 
-class BDF_5(BDF_general):
-    def __init__(self, problem):
-        BDF_general.__init__(self, problem, 5)
-
-
-class BDF_6(BDF_general):
-    def __init__(self, problem):
-        BDF_general.__init__(self, problem, 6)
-
-
 class EE_solver(Explicit_ODE):
     maxsteps = 500
     maxit = 100
@@ -152,7 +138,6 @@ class EE_solver(Explicit_ODE):
 
     def __init__(self, problem):
         Explicit_ODE.__init__(self, problem)
-
         # Solver options
         self.options["h"] = 0.01
         # Statistics
@@ -232,11 +217,6 @@ if __name__ == "__main__":
             solver.simulate(100)
             solver.plot()
             solver.print_statistics()
-
-            # problem.name = f"Task 3, k={k}, BDF6-solver"
-            # solver = BDF_6(problem)
-            # solver.simulate(100)
-            # solver.plot()
 
     # doTask1()
     doTask3()
