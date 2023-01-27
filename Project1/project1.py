@@ -6,7 +6,7 @@ import numpy as np
 
 class BDF_general(Explicit_ODE):
     maxsteps = 500
-    maxit = 1000
+    maxit = 100
     tol = 1.e-8
 
     def __init__(self, problem, degree):
@@ -33,6 +33,7 @@ class BDF_general(Explicit_ODE):
         y_list = [y0]
 
         self.statistics["nsteps"] += 1
+
         t, y = self.EEstep(t0, y0, h)
         t_list.append(t)
         y_list.append(y)
@@ -46,7 +47,7 @@ class BDF_general(Explicit_ODE):
 
             t_list.append(t)
             y_list.append(y)
-            h = min(h, np.abs(tf-t))
+            h = min(self.options["h"], np.abs(tf-t))
 
         return ID_PY_OK, t_list, y_list
 
@@ -64,46 +65,77 @@ class BDF_general(Explicit_ODE):
         return self.BDFstep_general_internal(t_n, Y, coeffs[len(Y)-1], h)
 
     def BDFstep_general_internal(self, t_n, Y, coeffs, h):
-        t_np1 = t_n + h
-        y_np1 = Y[0]
         static_terms = np.zeros(len(Y[0]))
 
         for i in range(len(Y)):
             static_terms += coeffs[i+1] * Y[i]
-
-        # FPI
+        # Predictor
+        t_np1 = t_n + h
+        y_np1_i = Y[0]
         for i in range(self.maxit):
+            # BDF Evaluator
+            y_np1_temp = - (static_terms + coeffs[-1]*h*self.problem.rhs(t_np1, y_np1_i))/coeffs[0]
             self.statistics["nfcns"] += 1
-            y_np1_old = y_np1
-            y_np1 = - static_terms/coeffs[0] - (coeffs[-1]/coeffs[0])*h*self.problem.rhs(t_np1, y_np1_old)
-            if(np.linalg.norm(y_np1-y_np1_old)) < self.tol:
-                return t_np1, y_np1
+
+            # FPI Corrector
+            y_np1_ip1 = y_np1_temp
+
+            if(np.linalg.norm(y_np1_ip1-y_np1_i)) < self.tol:
+                return t_np1, y_np1_ip1
+            y_np1_i = y_np1_ip1
         else:
             raise Explicit_ODE_Exception(f"Corrector could not converge within {i} iterations")
 
 
 class BDF_general_newton(BDF_general):
-    def BDFstep_general_internal(self, t_n, Y, coeffs, h):
-        t_np1 = t_n + h
-        y_np1 = Y[0]
-        static_terms = np.zeros(len(Y[0]))
+    maxsteps = 500
+    maxit = 100
+    tol = 1.e-8
 
-        for i in range(len(Y)):
-            static_terms += coeffs[i+1] * Y[i]
+    def __init__(self, problem, degree):
+        Explicit_ODE.__init__(self, problem)
+        self.degree = degree
 
-        # Newton
-        for i in range(self.maxit):
+        # Solver options
+        self.options["h"] = 0.01
+        # Statistics
+        self.statistics["nsteps"] = 0
+        self.statistics["nfcns"] = 0
+
+def BDFstep_general_internal(self, t_n, Y, coeffs, h):
+    static_terms = np.zeros(len(Y[0]))
+    for i in range(len(Y)):
+        static_terms += coeffs[i+1] * Y[i]
+
+    # Predictor
+    t_np1 = t_n + h
+    y_np1_i = Y[0]
+
+    feval = lambda y: - (static_terms + coeffs[-1]*h*self.problem.rhs(t_np1, y))/coeffs[0]
+    for i in range(self.maxit):
+        self.statistics["nfcns"] += 1
+        # BDF evaluator
+        y_np1_temp = - (static_terms + coeffs[-1]*h*self.problem.rhs(t_np1, y_np1_i))/coeffs[0]
+
+        # Newton Corrector
+        jac = np.zeros((len(Y[0]), len(Y[0])))
+        for j in range(len(Y[0])):
+            e = np.zeros(len(Y[0]))
+            e[j] = 1
+            y_np1_temp2 = - (static_terms + coeffs[-1]*h*self.problem.rhs(t_np1, y_np1_i+e*1e-10))/coeffs[0]
+            jac[:, j] = (y_np1_temp2-y_np1_temp)/1e-10
             self.statistics["nfcns"] += 1
-            y_np1_old = y_np1
-            # Newton predictor
-            feval = self.problem.rhs(t_n, y_np1_old)
-            y_np1 = y_np1_old - feval/((self.problem.rhs(t_n, y_np1_old+1e-6)-feval)/1e-6)
-            # BDF corrector
-            y_np1 = - (static_terms + coeffs[-1]*h*feval)/coeffs[0]
-            if(np.linalg.norm(y_np1-y_np1_old)) < self.tol:
-                return t_np1, y_np1
-        else:
-            raise Explicit_ODE_Exception(f"Corrector could not converge within {i} iterations")
+        try:
+            y_np1_ip1 = y_np1_i + np.linalg.solve(jac, -y_np1_temp)
+
+        except:
+            return t_np1, y_np1_temp
+        if(np.linalg.norm(y_np1_ip1-y_np1_i)) < self.tol:
+            return t_np1, y_np1_temp
+
+        y_np1_i = y_np1_ip1
+    else:
+        raise Explicit_ODE_Exception(f"Corrector could not converge within {i} iterations")
 
 
 class BDF_2(BDF_general):
@@ -172,7 +204,7 @@ class EE_solver(Explicit_ODE):
 if __name__ == "__main__":
     def doTask1():
         def problem_func(t, y):
-            temp = k * (1 - 1/np.sqrt(y[0]**2+y[1]**2))
+            temp = k * ((np.sqrt(y[0]**2+y[1]**2) - 1)/np.sqrt(y[0]**2+y[1]**2))
             return np.asarray([y[2], y[3], -y[0]*temp, -y[1]*temp - 1])
         starting_point = np.array([1, 0, 0, 0])
         problem = Explicit_Problem(problem_func, y0=starting_point)
@@ -185,38 +217,49 @@ if __name__ == "__main__":
 
     def doTask3():
         def problem_func(t, y):
-            temp = k * (1 - 1/np.sqrt(y[0]**2+y[1]**2))
+            temp = spring_constant * ((np.sqrt(y[0]**2+y[1]**2) - 1)/np.sqrt(y[0]**2+y[1]**2))
             return np.asarray([y[2], y[3], -y[0]*temp, -y[1]*temp - 1])
 
-        for k in [10, 100, 1000]:
+        for spring_constant in [10]:
             starting_point = np.array([2, 0, 0, 0])
             problem = Explicit_Problem(problem_func, y0=starting_point)
 
-            # problem.name = f"Task 3, k={k}, CVode"
-            # solver = CVode(problem)
-            # solver.simulate(100)
-            # solver.plot()
+            problem.name = f"Task 3, k={spring_constant}, CVode"
+            solver = CVode(problem)
+            solver.simulate(100)
+            solver.plot()
 
-            # problem.name = f"Task 3, k={k}, EE-solver"
+            # problem.name = f"Task 3, k={spring_constant}, EE-solver"
             # solver = EE_solver(problem)
             # solver.simulate(100)
             # solver.plot()
 
-            # problem.name = f"Task 3, k={k}, BDF2-solver"
+            # problem.name = f"Task 3, k={spring_constant}, BDF2-solver"
             # solver = BDF_2(problem)
             # solver.simulate(1000)
             # solver.plot()
 
-            # problem.name = f"Task 3, k={k}, BDF3-solver"
-            # solver = BDF_3_newton(problem)
-            # solver.simulate(100)
+            # problem.name = f"Task 3, k={spring_constant}, BDF3-solver, FPI"
+            # solver = BDF_3(problem)
+            # solver.simulate(10)
             # solver.plot()
 
-            problem.name = f"Task 3, k={k}, BDF4-solver"
-            solver = BDF_4_newton(problem)
+            # problem.name = f"Task 3, k={spring_constant}, BDF4-solver, FPI"
+            # solver = BDF_4(problem)
+            # solver.simulate(10)
+            # solver.plot()
+
+            problem.name = f"Task 3, k={spring_constant}, BDF3-solver, Newton"
+            solver = BDF_3_newton(problem)
             solver.simulate(100)
             solver.plot()
             solver.print_statistics()
+
+            # problem.name = f"Task 3, k={spring_constant}, BDF4-solver, Newton"
+            # solver = BDF_4_newton(problem)
+            # solver.simulate(10)
+            # solver.plot()
+            # solver.print_statistics()
 
     # doTask1()
     doTask3()
