@@ -3,7 +3,7 @@ import numpy as np
 from assimulo.ode import Explicit_Problem
 
 import BDF_FPI as FPI
-import BDF_Newton as NEW
+import BDF_Newton_VarStep as VAR
 import BDF2_CodeByClaus as CLAUS
 
 
@@ -50,10 +50,10 @@ def doTask3():
         # solver.simulate(t_end)
         # solver.plot()
 
-        # problem.name = f"Task 3, k={spring_constant}, BDF3-solver, FPI"
-        # solver = FPI.BDF3(problem)
-        # solver.simulate(t_end)
-        # solver.plot()
+        problem.name = f"Task 3, k={spring_constant}, BDF3-solver, FPI"
+        solver = FPI.BDF3(problem)
+        solver.simulate(t_end)
+        solver.plot()
 
         # problem.name = f"Task 3, k={spring_constant}, BDF4-solver, FPI"
         # solver = FPI.BDF4(problem)
@@ -70,13 +70,13 @@ def doTask3():
         # solver.simulate(t_end)
         # solver.plot()
 
-        problem.name = f"Task 3, k={spring_constant}, BDF2-solver, Newton"
-        solver = NEW.BDF2_Newton(problem)
-        solver.simulate(t_end)
-        solver.plot()
+        # problem.name = f"Task 3, k={spring_constant}, BDF2-solver, Newton"
+        # solver = VAR.BDF2_Newton(problem)
+        # solver.simulate(t_end)
+        # solver.plot()
 
         problem.name = f"Task 3, k={spring_constant}, BDF3-solver, Newton"
-        solver = NEW.BDF3_Newton(problem)
+        solver = VAR.BDF3_Newton(problem)
         solver.simulate(t_end)
         solver.plot()
 
