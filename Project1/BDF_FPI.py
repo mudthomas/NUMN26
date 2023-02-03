@@ -43,7 +43,7 @@ class BDF_general(Explicit_ODE):
 
     def integrate(self, t0, y0, tf, opts):
         """Solves the ODE problem.
-        Firs it takes one step with the explicit Euler method,
+        First it takes one step with the explicit Euler method,
         then it takes steps using the BDF method of increasing order util self.order is reached.
         After self.order number of steps it continues taking steps of that BDF method util reaching tf.
 
