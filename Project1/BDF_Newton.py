@@ -5,44 +5,45 @@ import numpy as np
 import BDF_FPI as FPI
 
 
-class BDF2_Newton(FPI.BDF2):
+class BDF_general(FPI.BDF_general):
+    """A solver for ODEs using the BDF method with Newton as corrector.
+       Implements the Explicit_ODE method from Assimulo.
+    """
     maxsteps = 500
     maxit = 10000
     tol = 1.e-8
     rtol = tol
     atol = np.array([tol, tol, tol, tol])
 
-    def integrate(self, t0, y0, tf, opts):
-        h_list = []
-        t_list = [t0]
-        y_list = [y0]
+    def __init__(self, problem, order):
+        """Initiates an instance of BDF_general.
 
-        h = min(self._get_h(), np.abs(tf-t0))
-        self.statistics["nsteps"] += 1
-        t, y = self.EEstep(t0, y0, h)
-        t_list.append(t)
-        y_list.append(y)
-        h_list.append(h)
+        Args:
+            problem (Explicit_Problem): See Assimulo documentation.
+            order (int): The order of BDF to use.
+        """
+        Explicit_ODE.__init__(self, problem)
+        self.order = order
 
-        h = min(h, np.abs(tf-t))
-        while(self.statistics["nsteps"] < self.maxsteps-1):
-            if h < 1.e-14:
-                print("h too small.")
-                break
-            if t >= tf:
-                break
-            t_new, y_new, h = self.BDF2step_Newton(t, y_list[-2:][::-1], h, h_list[-1:])
+        self.options["h"] = 0.01
+        self.statistics["nsteps"] = 0
+        self.statistics["nfcns"] = 0
 
-            if t_new is not None:
-                t = t_new
-                y = y_new
-                t_list.append(t)
-                y_list.append(y)
-                h_list.append(h)
-                self.statistics["nsteps"] += 1
-                h = min(h, np.abs(tf-t))
+    def _set_h(self, h):
+        """Set the step size.
 
-        return ID_PY_OK, t_list, y_list
+        Args:
+            h (float-like): New step size.
+        """
+        self.options["h"] = float(h)
+
+    def _get_h(self):
+        """Returns the step size.
+
+        Returns:
+            float: The current step size.
+        """
+        return self.options["h"]
 
     def getJacobian(self, t_np1, point, evaluation, finite_diff, Newton_func):
         jacobian = np.zeros((len(point), len(point)))
@@ -61,7 +62,64 @@ class BDF2_Newton(FPI.BDF2):
         ret /= len(y)
         return np.sqrt(ret)
 
-    def BDF2step_Newton(self, t_n, Y, h0, H):
+    def integrate(self, t0, y0, tf, opts):
+        h_list = []
+        t_list = [t0]
+        y_list = [y0]
+
+        h = min(self._get_h(), np.abs(tf-t0))
+        self.statistics["nsteps"] += 1
+        t, y = self.EEstep(t0, y0, h)
+        t_list.append(t)
+        y_list.append(y)
+        h_list.append(h)
+
+        h = min(h, np.abs(tf-t))
+        for i in range(1, self.order):
+            self.statistics["nsteps"] += 1
+            t, y = self.BDFstep_general(t, y_list[::-1], h)
+            t_list.append(t)
+            y_list.append(y)
+            h_list.append(h)
+            h = min(h, np.abs(tf-t))
+
+        while(self.statistics["nsteps"] < self.maxsteps-1):
+            if h < 1.e-14:
+                print("h too small.")
+                break
+            if t >= tf:
+                break
+            t_new, y_new, h = self.BDFstep_Newton(t, y_list[-self.order:][::-1], h, h_list[-(self.order-1):][::-1])
+
+            if t_new is not None:
+                t = t_new
+                y = y_new
+                t_list.append(t)
+                y_list.append(y)
+                h_list.append(h)
+                self.statistics["nsteps"] += 1
+                h = min(h, np.abs(tf-t))
+
+        return ID_PY_OK, t_list, y_list
+
+
+class BDF2_Newton(BDF_general):
+    maxsteps = 500
+    maxit = 100
+    tol = 1.e-8
+    rtol = tol
+    atol = np.array([tol, tol, tol, tol])
+
+    def __init__(self, problem):
+        """Initiates an instance of BDF_general.
+
+        Args:
+            problem (Explicit_Problem): See Assimulo documentation.
+            order (int): The order of BDF to use.
+        """
+        BDF_general.__init__(self, problem, order=2)
+
+    def BDFstep_Newton(self, t_n, Y, h, H):
         h_nm1 = H[0]
         y_n, y_nm1 = Y
 
@@ -71,105 +129,46 @@ class BDF2_Newton(FPI.BDF2):
             a_n = - a_np1 - a_nm1
             return a_np1 * y + a_n*y_n + a_nm1*y_nm1 - self.problem.rhs(t, y)
 
-        h = h0
         t_np1 = t_n + h
         y_np1_i = Y[0]
-
-        temp = NewtonFunc(t_np1, y_np1_i)
-        finite_diff = 1e-8
-        jacobian = self.getJacobian(t_np1, y_np1_i, temp, finite_diff, NewtonFunc)
+        jacobian = self.getJacobian(t_np1, y_np1_i, NewtonFunc(t_np1, y_np1_i), 1e-8, NewtonFunc)
         new_jacobian = 1
 
         for i in range(self.maxit):
             self.statistics["nfcns"] += 1
             y_np1_ip1 = y_np1_i - np.linalg.solve(jacobian, y_np1_i)
-            convergence = self.getNorm(y_np1_ip1)/self.getNorm(y_np1_i) < 1
-
-            if convergence:
+            if self.getNorm(y_np1_ip1)/self.getNorm(y_np1_i) < 1:
                 if np.linalg.norm(y_np1_ip1 - Y[0]) < self.tol:
                     return t_np1, y_np1_ip1, h*2
                 else:
                     return None, None, h/2
-
             else:
-                if new_jacobian == 1:
+                if new_jacobian:
                     h /= 2
                     t_np1 = t_n + h
-                    temp = NewtonFunc(t_np1, y_np1_i)
-                    jacobian = self.getJacobian(t_np1, y_np1_i, temp, finite_diff, NewtonFunc)
-                else:
-                    temp = NewtonFunc(t_np1, y_np1_i)
-                    jacobian = self.getJacobian(t_np1, y_np1_i, temp, finite_diff, NewtonFunc)
-                    new_jacobian = 1
+                jacobian = self.getJacobian(t_np1, y_np1_i, NewtonFunc(t_np1, y_np1_i), 1e-8, NewtonFunc)
+                new_jacobian = 1
         else:
             raise Explicit_ODE_Exception(f"Corrector could not converge within {i} iterations")
 
 
-class BDF3_Newton(FPI.BDF3):
+class BDF3_Newton(BDF_general):
     maxsteps = 500
-    maxit = 10000
+    maxit = 100
     tol = 1.e-8
     rtol = tol
     atol = np.array([tol, tol, tol, tol])
 
-    def integrate(self, t0, y0, tf, opts):
-        h_list = []
-        t_list = [t0]
-        y_list = [y0]
+    def __init__(self, problem):
+        """Initiates an instance of BDF_general.
 
-        h = min(self._get_h(), np.abs(tf-t0))
-        self.statistics["nsteps"] += 1
-        t, y = self.EEstep(t0, y0, h)
-        t_list.append(t)
-        y_list.append(y)
-        h_list.append(h)
+        Args:
+            problem (Explicit_Problem): See Assimulo documentation.
+            order (int): The order of BDF to use.
+        """
+        BDF_general.__init__(self, problem, order=3)
 
-        h = min(h, np.abs(tf-t0))
-        self.statistics["nsteps"] += 1
-        t, y = self.BDFstep_general(t, y_list[::-1], h)
-        t_list.append(t)
-        y_list.append(y)
-        h_list.append(h)
-
-        h = min(h, np.abs(tf-t))
-
-        while(self.statistics["nsteps"] < self.maxsteps-1):
-            if h < 1.e-14:
-                print("h too small.")
-                break
-            if t >= tf:
-                break
-            t_new, y_new, h = self.BDF3step_Newton(t, y_list[-3:][::-1], h, h_list[-2:][::-1])
-
-            if t_new is not None:
-                t = t_new
-                y = y_new
-                t_list.append(t)
-                y_list.append(y)
-                h_list.append(h)
-                self.statistics["nsteps"] += 1
-                h = min(h, np.abs(tf-t))
-
-        return ID_PY_OK, t_list, y_list
-
-    def getNorm(self, y):
-        ret = 0
-        for i in range(len(y)):
-            W = self.rtol * np.abs(y[i]) + self.atol[i]
-            ret += (y[i]/W)**2
-        ret /= len(y)
-        return np.sqrt(ret)
-
-    def getJacobian(self, t_np1, point, evaluation, finite_diff, Newton_func):
-        jacobian = np.zeros((len(point), len(point)))
-        for j in range(len(point)):
-            shift = np.zeros(len(point))
-            shift[j] = finite_diff
-            jacobian[:, j] = (Newton_func(t_np1, point + shift) - evaluation)/finite_diff
-            self.statistics["nfcns"] += 1
-        return jacobian
-
-    def BDF3step_Newton(self, t_n, Y, h0, H):
+    def BDFstep_Newton(self, t_n, Y, h, H):
         h_nm1, h_nm2 = H
         y_n, y_nm1, y_nm2 = Y
 
@@ -180,21 +179,15 @@ class BDF3_Newton(FPI.BDF3):
             a_np1 = - (a_n + a_nm1 + a_nm2)
             return a_np1*y + a_n*y_n + a_nm1*y_nm1 + a_nm2*y_nm2 - self.problem.rhs(t, y)
 
-        h = h0
         t_np1 = t_n + h
         y_np1_i = Y[0]
-
-        temp = NewtonFunc(t_np1, y_np1_i)
-        finite_diff = 1e-8
-        jacobian = self.getJacobian(t_np1, y_np1_i, temp, finite_diff, NewtonFunc)
+        jacobian = self.getJacobian(t_np1, y_np1_i, NewtonFunc(t_np1, y_np1_i), 1e-8, NewtonFunc)
         new_jacobian = 1
 
         for i in range(self.maxit):
             self.statistics["nfcns"] += 1
             y_np1_ip1 = y_np1_i - np.linalg.solve(jacobian, y_np1_i)
-            convergence = self.getNorm(y_np1_ip1)/self.getNorm(y_np1_i) <= 1
-
-            if convergence:
+            if self.getNorm(y_np1_ip1)/self.getNorm(y_np1_i) < 1:
                 if np.linalg.norm(y_np1_ip1 - Y[0]) < self.tol:
                     return t_np1, y_np1_ip1, h*2
                 else:
@@ -203,12 +196,8 @@ class BDF3_Newton(FPI.BDF3):
                 if new_jacobian == 1:
                     h /= 2
                     t_np1 = t_n + h
-                    temp = NewtonFunc(t_np1, y_np1_i)
-                    jacobian = self.getJacobian(t_np1, y_np1_i, temp, finite_diff, NewtonFunc)
-                else:
-                    temp = NewtonFunc(t_np1, y_np1_i)
-                    jacobian = self.getJacobian(t_np1, y_np1_i, temp, finite_diff, NewtonFunc)
-                    new_jacobian = 1
+                jacobian = self.getJacobian(t_np1, y_np1_i, NewtonFunc(t_np1, y_np1_i), 1e-8, NewtonFunc)
+                new_jacobian = 1
         else:
             raise Explicit_ODE_Exception(f"Corrector could not converge within {i} iterations")
 
