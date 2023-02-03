@@ -173,6 +173,7 @@ class BDF_general(Explicit_ODE):
 class BDF1(BDF_general):
     """A solver for ODEs using the BDF method of order 1 with FPI as corrector.
        Implements the BDF_general method.
+       y_np1 - y_n = h*f(t_np1, y_np1)
     """
     def __init__(self, problem):
         """Initiates an instance of BDF1.
@@ -200,6 +201,7 @@ class BDF1(BDF_general):
 class BDF2(BDF_general):
     """A solver for ODEs using the BDF method of order 2 with FPI as corrector.
        Implements the BDF_general method.
+       y_np1 - (4/3)y_n + (1/3)y_nm1 = (2/3)h*f(t_np1, y_np1)
     """
     def __init__(self, problem):
         """Initiates an instance of BDF2.
@@ -227,6 +229,7 @@ class BDF2(BDF_general):
 class BDF3(BDF_general):
     """A solver for ODEs using the BDF method of order 3 with FPI as corrector.
        Implements the BDF_general method.
+       y_np1 - (18/11)y_n + (9/11)y_nm1 - (2/11)y_nm2 = (6/11)h*f(t_np1, y_np1)
     """
     def __init__(self, problem):
         """Initiates an instance of BDF3.
@@ -254,6 +257,7 @@ class BDF3(BDF_general):
 class BDF4(BDF_general):
     """A solver for ODEs using the BDF method of order 4 with FPI as corrector.
        Implements the BDF_general method.
+       y_np1 - (48/25)y_n + (36/25)y_nm1 - (16/25)y_nm2 + (3/25)y_nm3 = (12/25)h*f(t_np1, y_np1)
     """
     def __init__(self, problem):
         """Initiates an instance of BDF4.
@@ -281,6 +285,8 @@ class BDF4(BDF_general):
 class BDF5(BDF_general):
     """A solver for ODEs using the BDF method of order 5 with FPI as corrector.
        Implements the BDF_general method.
+       y_np1 - (300/137)y_n + (300/137)y_nm1 - (200/137)y_nm2 + (75/137)y_nm3
+       - (12/137)y_nm4 = (60/137)h*f(t_np1, y_np1)
     """
     def __init__(self, problem):
         """Initiates an instance of BDF5.
@@ -308,6 +314,8 @@ class BDF5(BDF_general):
 class BDF6(BDF_general):
     """A solver for ODEs using the BDF method of order 6 with FPI as corrector.
        Implements the BDF_general method.
+       y_np1 - (360/147)y_n + (450/147)y_nm1 - (400/147)y_nm2 + (225/147)y_nm3
+       - (72/147)y_nm4 + (10/147)y_nm5 = (60/147)h*f(t_np1, y_np1)
     """
     def __init__(self, problem):
         """Initiates an instance of BDF6.
