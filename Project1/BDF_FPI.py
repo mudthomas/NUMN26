@@ -1,4 +1,3 @@
-from assimulo.solvers.sundials import CVode
 from assimulo.explicit_ode import Explicit_ODE
 from assimulo.ode import Explicit_Problem, Explicit_ODE_Exception, ID_PY_OK
 import numpy as np
@@ -418,6 +417,8 @@ class EE_solver(Explicit_ODE):
 
 
 if __name__ == "__main__":
+    from assimulo.solvers.sundials import CVode
+
     def doTask1():
         def problem_func(t, y):
             temp = k * ((np.sqrt(y[0]**2+y[1]**2) - 1)/np.sqrt(y[0]**2+y[1]**2))
