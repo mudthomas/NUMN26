@@ -7,7 +7,7 @@ import BDF_FPI as FPI
 
 class BDF_general(FPI.BDF_general):
     """A solver for ODEs using the BDF method with Newton as corrector.
-       Implements the Explicit_ODE method from Assimulo.
+       Implements a BDF solver with FPI.
     """
     maxsteps = 500
     maxit = 100
@@ -44,7 +44,23 @@ class BDF_general(FPI.BDF_general):
         """
         return self.options["h"]
 
-    def getJacobian(self, t_np1, point, evaluation, finite_diff, Newton_func):
+    def getJacobian(self, t_np1, point, Newton_func, evaluation=None, finite_diff=1.e-8):
+        """Finds the jacobian using finite differences.
+
+        Args:
+            t_np1 (float): The evaluation time for the Jacobian.
+            point ([floats]): The point at which to find the Jacobian.
+            Newton_func (callable): A function of two variables.
+            evaluation (arraylike, optional): An evaluation of Newton_fun at point. Defaults to None.
+            finite_diff (float, optional): The proverbial difference. Defaults to 1.e-8.
+
+        Returns:
+            ndarray: matrix of floats
+        """
+        if evaluation is None:
+            evaluation = Newton_func(t_np1, point)
+            self.statistics["nfcns"] += 1
+
         jacobian = np.zeros((len(point), len(point)))
         for j in range(len(point)):
             shift = np.zeros(len(point))
@@ -54,6 +70,14 @@ class BDF_general(FPI.BDF_general):
         return jacobian
 
     def getNorm(self, y):
+        """Returns the norm of y.
+
+        Args:
+            y (ndarray([floats])): Vector to find the norm of.
+
+        Returns:
+            float: The norm of y.
+        """
         ret = 0
         for i in range(len(y)):
             W = self.rtol * np.abs(y[i]) + self.atol[i]
@@ -62,6 +86,17 @@ class BDF_general(FPI.BDF_general):
         return np.sqrt(ret)
 
     def integrate(self, t0, y0, tf, opts):
+        """_summary_
+
+        Args:
+            t0 (_type_): _description_
+            y0 (_type_): _description_
+            tf (_type_): _description_
+            opts (_type_): _description_
+
+        Returns:
+            _type_: _description_
+        """
         h_list = []
         t_list = [t0]
         y_list = [y0]
@@ -102,12 +137,26 @@ class BDF_general(FPI.BDF_general):
         return ID_PY_OK, t_list, y_list
 
     def BDFstep_Newton(self, t_n, Y, h, H):
+        """_summary_
+
+        Args:
+            t_n (_type_): _description_
+            Y (_type_): _description_
+            h (_type_): _description_
+            H (_type_): _description_
+
+        Raises:
+            Explicit_ODE_Exception: _description_
+
+        Returns:
+            _type_: _description_
+        """
         NewtonFunc_hvar = self.getNewtonFunc(Y, H)
         t_np1 = t_n + h
         y_np1_i = Y[0]
 
         NewtonFunc = lambda t, y: NewtonFunc_hvar(t, y, h)
-        jacobian = self.getJacobian(t_np1, y_np1_i, NewtonFunc(t_np1, y_np1_i), 1e-8, NewtonFunc)
+        jacobian = self.getJacobian(t_np1, y_np1_i, NewtonFunc, NewtonFunc(t_np1, y_np1_i))
         new_jacobian = 1
 
         for i in range(self.maxit):
@@ -123,7 +172,7 @@ class BDF_general(FPI.BDF_general):
                     h /= 2
                     t_np1 = t_n + h
                 NewtonFunc = lambda t, y: NewtonFunc_hvar(t, y, h)
-                jacobian = self.getJacobian(t_np1, y_np1_i, NewtonFunc(t_np1, y_np1_i), 1e-8, NewtonFunc)
+                jacobian = self.getJacobian(t_np1, y_np1_i, NewtonFunc, NewtonFunc(t_np1, y_np1_i))
                 new_jacobian = 1
         else:
             raise Explicit_ODE_Exception(f"Corrector could not converge within {i} iterations")
@@ -140,6 +189,15 @@ class BDF2_Newton(BDF_general):
         BDF_general.__init__(self, problem, order=2)
 
     def getNewtonFunc(self, Y, H):
+        """The BDF2 function to use in the Newton method. Variable step size.
+
+        Args:
+            Y ([floats]): 2 previous points.
+            H ([float]): 1 previous step size.
+
+        Returns:
+            callable: A function of 3 variables: t, y and h.
+        """
         h_nm1 = H[0]
         y_n, y_nm1 = Y
         a_np1 = lambda h: (h_nm1+2*h)/(h*(h_nm1 + h))
@@ -159,6 +217,15 @@ class BDF3_Newton(BDF_general):
         BDF_general.__init__(self, problem, order=3)
 
     def getNewtonFunc(self, Y, H):
+        """The BDF3 function to use in the Newton method. Variable step size.
+
+        Args:
+            Y ([floats]): 3 previous points.
+            H ([floats]): 2 previous step sizes.
+
+        Returns:
+            callable: A function of 3 variables: t, y and h.
+        """
         h_nm1, h_nm2 = H
         y_n, y_nm1, y_nm2 = Y
         a_n = lambda h: - ((h + h_nm1) * (h + h_nm1 + h_nm2))/(h*h_nm1*(h_nm1+h_nm2))
