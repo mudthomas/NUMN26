@@ -214,66 +214,44 @@ class BDF3_Newton(FPI.BDF3):
             raise Explicit_ODE_Exception(f"Corrector could not converge within {i} iterations")
 
 
-
 if __name__ == "__main__":
+    # When run as main, compares the methods to CVode using the function 'problem_func' as example.
+    def problem_func(t, y):
+        temp = spring_constant * (1 - 1/np.sqrt(y[0]**2+y[1]**2))
+        return np.asarray([y[2], y[3], -y[0]*temp, -y[1]*temp - 1])
+    spring_constant = 5
+
+    starting_point = np.array([1, 0, 0, 0])
+    problem = Explicit_Problem(problem_func, y0=starting_point)
+    t_end = 10
+
     from assimulo.solvers.sundials import CVode
-    def doTask1():
-        def problem_func(t, y):
-            temp = k * ((np.sqrt(y[0]**2+y[1]**2) - 1)/np.sqrt(y[0]**2+y[1]**2))
-            return np.asarray([y[2], y[3], -y[0]*temp, -y[1]*temp - 1])
-        starting_point = np.array([1, 0, 0, 0])
-        problem = Explicit_Problem(problem_func, y0=starting_point)
+    problem.name = f"Task 3, k={spring_constant}, CVode"
+    solver = CVode(problem)
+    solver.simulate(t_end)
+    solver.plot()
 
-        for k in [1, 5, 10, 15, 20]:
-            problem.name = f"Task 1, k={k}"
-            solver = CVode(problem)
-            solver.simulate(50)
-            solver.plot()  # kwargs at: matplotlib.sourceforge.net/api/pyplot_api.html
+    # problem.name = f"Task 3, k={spring_constant}, BDF2-solver, FPI"
+    # solver = FPI.BDF2(problem)
+    # solver.simulate(t_end)
+    # solver.plot()
 
-    def doTask3():
-        def problem_func(t, y):
-            temp = spring_constant * (1 - 1/np.sqrt(y[0]**2+y[1]**2))
-            return np.asarray([y[2], y[3], -y[0]*temp, -y[1]*temp - 1])
+    # problem.name = f"Task 3, k={spring_constant}, BDF3-solver, FPI"
+    # solver = FPI.BDF3(problem)
+    # solver.simulate(t_end)
+    # solver.plot()
 
-        for spring_constant in [5]:
-            starting_point = np.array([1, 0, 0, 0])
-            problem = Explicit_Problem(problem_func, y0=starting_point)
-            t_end = 10
+    # problem.name = f"Task 3, k={spring_constant}, BDF4-solver, FPI"
+    # solver = FPI.BDF4(problem)
+    # solver.simulate(t_end)
+    # solver.plot()
 
-            problem.name = f"Task 3, k={spring_constant}, CVode"
-            solver = CVode(problem)
-            solver.simulate(t_end)
-            solver.plot()
+    problem.name = f"Task 3, k={spring_constant}, BDF2-solver, Newton"
+    solver = BDF2_Newton(problem)
+    solver.simulate(t_end)
+    solver.plot()
 
-            # problem.name = f"Task 3, k={spring_constant}, EE-solver"
-            # solver = FPI.EE_solver(problem)
-            # solver.simulate(t_end)
-            # solver.plot()
-
-            # problem.name = f"Task 3, k={spring_constant}, BDF2-solver, FPI"
-            # solver = FPI.BDF2(problem)
-            # solver.simulate(t_end)
-            # solver.plot()
-
-            # problem.name = f"Task 3, k={spring_constant}, BDF3-solver, FPI"
-            # solver = FPI.BDF3(problem)
-            # solver.simulate(t_end)
-            # solver.plot()
-
-            # problem.name = f"Task 3, k={spring_constant}, BDF4-solver, FPI"
-            # solver = FPI.BDF4(problem)
-            # solver.simulate(t_end)
-            # solver.plot()
-
-            problem.name = f"Task 3, k={spring_constant}, BDF2-solver, Newton"
-            solver = BDF2_Newton(problem)
-            solver.simulate(t_end)
-            solver.plot()
-
-            problem.name = f"Task 3, k={spring_constant}, BDF3-solver, Newton"
-            solver = BDF3_Newton(problem)
-            solver.simulate(t_end)
-            solver.plot()
-
-    # doTask1()
-    doTask3()
+    problem.name = f"Task 3, k={spring_constant}, BDF3-solver, Newton"
+    solver = BDF3_Newton(problem)
+    solver.simulate(t_end)
+    solver.plot()

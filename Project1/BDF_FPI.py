@@ -417,70 +417,53 @@ class EE_solver(Explicit_ODE):
 
 
 if __name__ == "__main__":
+    # When run as main, compares the methods to CVode using the function 'problem_func' as example.
+    def problem_func(t, y):
+        temp = spring_constant * (1 - 1/np.sqrt(y[0]**2+y[1]**2))
+        return np.asarray([y[2], y[3], -y[0]*temp, -y[1]*temp - 1])
+    spring_constant = 3
+
+    starting_point = np.array([1-1e-6, 0, 0, 0])
+    problem = Explicit_Problem(problem_func, y0=starting_point)
+    t_end = 10
+
     from assimulo.solvers.sundials import CVode
+    problem.name = "CVode"
+    solver = CVode(problem)
+    solver.simulate(t_end)
+    solver.plot()
 
-    def doTask1():
-        def problem_func(t, y):
-            temp = k * ((np.sqrt(y[0]**2+y[1]**2) - 1)/np.sqrt(y[0]**2+y[1]**2))
-            return np.asarray([y[2], y[3], -y[0]*temp, -y[1]*temp - 1])
-        starting_point = np.array([1, 0, 0, 0])
-        problem = Explicit_Problem(problem_func, y0=starting_point)
+    problem.name = "EE-solver"
+    solver = EE_solver(problem)
+    solver.simulate(t_end)
+    solver.plot()
 
-        for k in [1, 5, 10, 15, 20]:
-            problem.name = f"Task 1, k={k}"
-            solver = CVode(problem)
-            solver.simulate(50)
-            solver.plot()  # kwargs at: matplotlib.sourceforge.net/api/pyplot_api.html
+    problem.name = "BDF1-solver, FPI"
+    solver = BDF1(problem)
+    solver.simulate(t_end)
+    solver.plot()
 
-    def doTask3():
-        def problem_func(t, y):
-            temp = spring_constant * (1 - 1/np.sqrt(y[0]**2+y[1]**2))
-            return np.asarray([y[2], y[3], -y[0]*temp, -y[1]*temp - 1])
+    problem.name = "BDF2-solver, FPI"
+    solver = BDF2(problem)
+    solver.simulate(t_end)
+    solver.plot()
 
-        for spring_constant in [1]:
-            starting_point = np.array([1-1e-6, 0, 0, 0])
-            problem = Explicit_Problem(problem_func, y0=starting_point)
-            t_end = 10
+    problem.name = "BDF3-solver, FPI"
+    solver = BDF3(problem)
+    solver.simulate(t_end)
+    solver.plot()
 
-            problem.name = f"Task 3, k={spring_constant}, CVode"
-            solver = CVode(problem)
-            solver.simulate(t_end)
-            solver.plot()
+    problem.name = "BDF4-solver, FPI"
+    solver = BDF4(problem)
+    solver.simulate(t_end)
+    solver.plot()
 
-            problem.name = f"Task 3, k={spring_constant}, EE-solver"
-            solver = EE_solver(problem)
-            solver.simulate(t_end)
-            solver.plot()
+    problem.name = "BDF5-solver, FPI"
+    solver = BDF5(problem)
+    solver.simulate(t_end)
+    solver.plot()
 
-            problem.name = f"Task 3, k={spring_constant}, BDF1-solver, FPI"
-            solver = BDF1(problem)
-            solver.simulate(t_end)
-            solver.plot()
-
-            problem.name = f"Task 3, k={spring_constant}, BDF2-solver, FPI"
-            solver = BDF2(problem)
-            solver.simulate(t_end)
-            solver.plot()
-
-            problem.name = f"Task 3, k={spring_constant}, BDF3-solver, FPI"
-            solver = BDF3(problem)
-            solver.simulate(t_end)
-            solver.plot()
-
-            problem.name = f"Task 3, k={spring_constant}, BDF4-solver, FPI"
-            solver = BDF4(problem)
-            solver.simulate(t_end)
-            solver.plot()
-
-            problem.name = f"Task 3, k={spring_constant}, BDF5-solver, FPI"
-            solver = BDF5(problem)
-            solver.simulate(t_end)
-            solver.plot()
-
-            problem.name = f"Task 3, k={spring_constant}, BDF6-solver, FPI"
-            solver = BDF6(problem)
-            solver.simulate(t_end)
-            solver.plot()
-
-    # doTask1()
-    doTask3()
+    problem.name = "BDF6-solver, FPI"
+    solver = BDF6(problem)
+    solver.simulate(t_end)
+    solver.plot()
