@@ -10,10 +10,8 @@ class BDF_general(FPI.BDF_general):
        Implements the Explicit_ODE method from Assimulo.
     """
     maxsteps = 500
-    maxit = 10000
+    maxit = 100
     tol = 1.e-8
-    rtol = tol
-    atol = np.array([tol, tol, tol, tol])
 
     def __init__(self, problem, order):
         """Initiates an instance of BDF_general.
@@ -24,10 +22,11 @@ class BDF_general(FPI.BDF_general):
         """
         Explicit_ODE.__init__(self, problem)
         self.order = order
-
         self.options["h"] = 0.01
         self.statistics["nsteps"] = 0
         self.statistics["nfcns"] = 0
+        self.rtol = self.tol
+        self.atol = np.ones(len(problem.y0))*self.tol
 
     def _set_h(self, h):
         """Set the step size.
@@ -102,35 +101,12 @@ class BDF_general(FPI.BDF_general):
 
         return ID_PY_OK, t_list, y_list
 
-
-class BDF2_Newton(BDF_general):
-    maxsteps = 500
-    maxit = 100
-    tol = 1.e-8
-    rtol = tol
-    atol = np.array([tol, tol, tol, tol])
-
-    def __init__(self, problem):
-        """Initiates an instance of BDF_general.
-
-        Args:
-            problem (Explicit_Problem): See Assimulo documentation.
-            order (int): The order of BDF to use.
-        """
-        BDF_general.__init__(self, problem, order=2)
-
     def BDFstep_Newton(self, t_n, Y, h, H):
-        h_nm1 = H[0]
-        y_n, y_nm1 = Y
-
-        def NewtonFunc(t, y):
-            a_np1 = (h_nm1+2*h)/(h*(h_nm1 + h))
-            a_nm1 = h/(h_nm1 * (h + h_nm1))
-            a_n = - a_np1 - a_nm1
-            return a_np1 * y + a_n*y_n + a_nm1*y_nm1 - self.problem.rhs(t, y)
-
+        NewtonFunc_hvar = self.getNewtonFunc(Y, H)
         t_np1 = t_n + h
         y_np1_i = Y[0]
+
+        NewtonFunc = lambda t, y: NewtonFunc_hvar(t, y, h)
         jacobian = self.getJacobian(t_np1, y_np1_i, NewtonFunc(t_np1, y_np1_i), 1e-8, NewtonFunc)
         new_jacobian = 1
 
@@ -146,19 +122,33 @@ class BDF2_Newton(BDF_general):
                 if new_jacobian:
                     h /= 2
                     t_np1 = t_n + h
+                NewtonFunc = lambda t, y: NewtonFunc_hvar(t, y, h)
                 jacobian = self.getJacobian(t_np1, y_np1_i, NewtonFunc(t_np1, y_np1_i), 1e-8, NewtonFunc)
                 new_jacobian = 1
         else:
             raise Explicit_ODE_Exception(f"Corrector could not converge within {i} iterations")
 
 
-class BDF3_Newton(BDF_general):
-    maxsteps = 500
-    maxit = 100
-    tol = 1.e-8
-    rtol = tol
-    atol = np.array([tol, tol, tol, tol])
+class BDF2_Newton(BDF_general):
+    def __init__(self, problem):
+        """Initiates an instance of BDF_general.
 
+        Args:
+            problem (Explicit_Problem): See Assimulo documentation.
+            order (int): The order of BDF to use.
+        """
+        BDF_general.__init__(self, problem, order=2)
+
+    def getNewtonFunc(self, Y, H):
+        h_nm1 = H[0]
+        y_n, y_nm1 = Y
+        a_np1 = lambda h: (h_nm1+2*h)/(h*(h_nm1 + h))
+        a_nm1 = lambda h: h/(h_nm1 * (h + h_nm1))
+        a_n = lambda h: - a_np1(h) - a_nm1(h)
+        return lambda t, y, h: a_np1(h) * y + a_n(h)*y_n + a_nm1(h)*y_nm1 - self.problem.rhs(t, y)
+
+
+class BDF3_Newton(BDF_general):
     def __init__(self, problem):
         """Initiates an instance of BDF_general.
 
@@ -168,38 +158,14 @@ class BDF3_Newton(BDF_general):
         """
         BDF_general.__init__(self, problem, order=3)
 
-    def BDFstep_Newton(self, t_n, Y, h, H):
+    def getNewtonFunc(self, Y, H):
         h_nm1, h_nm2 = H
         y_n, y_nm1, y_nm2 = Y
-
-        def NewtonFunc(t, y):
-            a_n = - ((h + h_nm1) * (h + h_nm1 + h_nm2))/(h*h_nm1*(h_nm1+h_nm2))
-            a_nm1 = (h * (h + h_nm1 + h_nm2))/(h_nm1 * h_nm2 * (h + h_nm1))
-            a_nm2 = - (h * (h + h_nm1))/(h_nm2 * (h_nm1 + h_nm2) * (h + h_nm1 + h_nm2))
-            a_np1 = - (a_n + a_nm1 + a_nm2)
-            return a_np1*y + a_n*y_n + a_nm1*y_nm1 + a_nm2*y_nm2 - self.problem.rhs(t, y)
-
-        t_np1 = t_n + h
-        y_np1_i = Y[0]
-        jacobian = self.getJacobian(t_np1, y_np1_i, NewtonFunc(t_np1, y_np1_i), 1e-8, NewtonFunc)
-        new_jacobian = 1
-
-        for i in range(self.maxit):
-            self.statistics["nfcns"] += 1
-            y_np1_ip1 = y_np1_i - np.linalg.solve(jacobian, y_np1_i)
-            if self.getNorm(y_np1_ip1)/self.getNorm(y_np1_i) < 1:
-                if np.linalg.norm(y_np1_ip1 - Y[0]) < self.tol:
-                    return t_np1, y_np1_ip1, h*2
-                else:
-                    return None, None, h/2
-            else:
-                if new_jacobian == 1:
-                    h /= 2
-                    t_np1 = t_n + h
-                jacobian = self.getJacobian(t_np1, y_np1_i, NewtonFunc(t_np1, y_np1_i), 1e-8, NewtonFunc)
-                new_jacobian = 1
-        else:
-            raise Explicit_ODE_Exception(f"Corrector could not converge within {i} iterations")
+        a_n = lambda h: - ((h + h_nm1) * (h + h_nm1 + h_nm2))/(h*h_nm1*(h_nm1+h_nm2))
+        a_nm1 = lambda h: (h * (h + h_nm1 + h_nm2))/(h_nm1 * h_nm2 * (h + h_nm1))
+        a_nm2 = lambda h: - (h * (h + h_nm1))/(h_nm2 * (h_nm1 + h_nm2) * (h + h_nm1 + h_nm2))
+        a_np1 = lambda h: - (a_n(h) + a_nm1(h) + a_nm2(h))
+        return lambda t, y, h: a_np1(h)*y + a_n(h)*y_n + a_nm1(h)*y_nm1 + a_nm2(h)*y_nm2 - self.problem.rhs(t, y)
 
 
 if __name__ == "__main__":
@@ -218,21 +184,6 @@ if __name__ == "__main__":
     solver = CVode(problem)
     solver.simulate(t_end)
     solver.plot()
-
-    # problem.name = f"Task 3, k={spring_constant}, BDF2-solver, FPI"
-    # solver = FPI.BDF2(problem)
-    # solver.simulate(t_end)
-    # solver.plot()
-
-    # problem.name = f"Task 3, k={spring_constant}, BDF3-solver, FPI"
-    # solver = FPI.BDF3(problem)
-    # solver.simulate(t_end)
-    # solver.plot()
-
-    # problem.name = f"Task 3, k={spring_constant}, BDF4-solver, FPI"
-    # solver = FPI.BDF4(problem)
-    # solver.simulate(t_end)
-    # solver.plot()
 
     problem.name = f"Task 3, k={spring_constant}, BDF2-solver, Newton"
     solver = BDF2_Newton(problem)
