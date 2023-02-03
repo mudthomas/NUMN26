@@ -10,7 +10,7 @@ class BDF_general(FPI.BDF_general):
        Implements a BDF solver with FPI.
     """
     maxsteps = 500
-    maxit = 100
+    maxit = 10000
     tol = 1.e-8
 
     def __init__(self, problem, order):
@@ -243,7 +243,7 @@ if __name__ == "__main__":
     def problem_func(t, y):
         temp = spring_constant * (1 - 1/np.sqrt(y[0]**2+y[1]**2))
         return np.asarray([y[2], y[3], -y[0]*temp, -y[1]*temp - 1])
-    spring_constant = 5
+    spring_constant = 500
 
     starting_point = np.array([1, 0, 0, 0])
     problem = Explicit_Problem(problem_func, y0=starting_point)
