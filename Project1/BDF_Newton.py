@@ -86,18 +86,21 @@ class BDF_general(FPI.BDF_general):
         return np.sqrt(ret)
 
     def integrate(self, t0, y0, tf, opts):
-        """_summary_
+        """Solves the ODE problem.
+        First it takes one step with the explicit Euler method,
+        then it takes steps using the BDF method with FPI of increasing order util self.order is reached.
+        After self.order number of steps it continues taking steps of that BDF method with Newton util reaching tf.
 
         Args:
-            t0 (_type_): _description_
-            y0 (_type_): _description_
-            tf (_type_): _description_
+            t0 (float-like): The starting time
+            y0 (array([floats])): The starting point
+            tf (_type_): The end time
             opts (_type_): _description_
 
         Returns:
-            _type_: _description_
+            (ID_PY_OK, [floats], [floats]): ID_PY_OK, a list of the evaluation times and a list of the values.
         """
-        h_list = []
+        h_list = []  # Is this neccessary? Better to calculate from the t's when needed?
         t_list = [t0]
         y_list = [y0]
 
@@ -137,19 +140,19 @@ class BDF_general(FPI.BDF_general):
         return ID_PY_OK, t_list, y_list
 
     def BDFstep_Newton(self, t_n, Y, h, H):
-        """_summary_
+        """One step of the BDF-method using Newtons method as a corrector.
 
         Args:
-            t_n (_type_): _description_
-            Y (_type_): _description_
-            h (_type_): _description_
-            H (_type_): _description_
+            t_n (float): Last evaluation time.
+            Y ([floats]): Previous values.
+            h (float): Step size.
+            H ([floats]): Previous step sizes (one less than Y).
 
         Raises:
-            Explicit_ODE_Exception: _description_
+            Explicit_ODE_Exception: See Assimulo documentation.
 
         Returns:
-            _type_: _description_
+            (float, float, float): The next evaluation time, its value and the stepsize used.
         """
         NewtonFunc_hvar = self.getNewtonFunc(Y, H)
         t_np1 = t_n + h
