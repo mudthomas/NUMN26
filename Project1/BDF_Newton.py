@@ -6,9 +6,11 @@ import BDF_FPI as FPI
 
 
 class BDF2_Newton(FPI.BDF2):
+    maxsteps = 500
     maxit = 10000
-    rtol = 1.0e-6
-    atol = np.array([1.0e-4, 1.0e-4, 1.0e-2, 1.0e-2])
+    tol = 1.e-8
+    rtol = tol
+    atol = np.array([tol, tol, tol, tol])
 
     def integrate(self, t0, y0, tf, opts):
         h_list = []
@@ -24,18 +26,21 @@ class BDF2_Newton(FPI.BDF2):
 
         h = min(h, np.abs(tf-t))
         while(self.statistics["nsteps"] < self.maxsteps-1):
-            if h < self.tol:
+            if h < 1.e-14:
                 print("h too small.")
                 break
             if t >= tf:
                 break
-            t, y, h_new = self.BDF2step_Newton(t, y_list[-2:][::-1], h, h_list[-1:])
+            t_new, y_new, h = self.BDF2step_Newton(t, y_list[-2:][::-1], h, h_list[-1:])
 
-            t_list.append(t)
-            y_list.append(y)
-            h_list.append(h_new)
-            self.statistics["nsteps"] += 1
-            h = min(h_new, np.abs(tf-t))
+            if t_new is not None:
+                t = t_new
+                y = y_new
+                t_list.append(t)
+                y_list.append(y)
+                h_list.append(h)
+                self.statistics["nsteps"] += 1
+                h = min(h, np.abs(tf-t))
 
         return ID_PY_OK, t_list, y_list
 
@@ -81,11 +86,11 @@ class BDF2_Newton(FPI.BDF2):
             convergence = self.getNorm(y_np1_ip1)/self.getNorm(y_np1_i) < 1
 
             if convergence:
-                new_jacobian = 0
-                if(np.linalg.norm(y_np1_ip1-y_np1_i)) <= self.tol:
-                    return t_np1, y_np1_ip1, h
+                if np.linalg.norm(y_np1_ip1 - Y[0]) < self.tol:
+                    return t_np1, y_np1_ip1, h*2
                 else:
-                    y_np1_i = y_np1_ip1
+                    return None, None, h/2
+
             else:
                 if new_jacobian == 1:
                     h /= 2
@@ -101,9 +106,11 @@ class BDF2_Newton(FPI.BDF2):
 
 
 class BDF3_Newton(FPI.BDF3):
+    maxsteps = 500
     maxit = 10000
-    rtol = 1.0e-6
-    atol = np.array([1.0e-4, 1.0e-4, 1.0e-2, 1.0e-2])
+    tol = 1.e-8
+    rtol = tol
+    atol = np.array([tol, tol, tol, tol])
 
     def integrate(self, t0, y0, tf, opts):
         h_list = []
@@ -126,29 +133,22 @@ class BDF3_Newton(FPI.BDF3):
 
         h = min(h, np.abs(tf-t))
 
-        while(self.statistics["nsteps"] < self.maxsteps-2):
-            if h < self.tol:
+        while(self.statistics["nsteps"] < self.maxsteps-1):
+            if h < 1.e-14:
                 print("h too small.")
                 break
             if t >= tf:
                 break
-            t, y, h_new = self.BDF3step_Newton(t, y_list[-3:][::-1], h, h_list[-2:][::-1])
+            t_new, y_new, h = self.BDF3step_Newton(t, y_list[-3:][::-1], h, h_list[-2:][::-1])
 
-            # _, y2, _ = self.BDF2step_Newton(t, y_list[-2:][::-1], h, h_list[-1:][::-1])
-            # error = self.getNorm(y-y2)
-            # if error < self.tol:
-            #     t_list.append(t)
-            #     y_list.append(y)
-            #     h_list.append(h_new)
-            #     self.statistics["nsteps"] += 1
-            #     h = min(h_new*2, np.abs(tf-t))
-            # else:
-            #     h = min(h_new/2, np.abs(tf-t))
-            t_list.append(t)
-            y_list.append(y)
-            h_list.append(h_new)
-            self.statistics["nsteps"] += 1
-            h = min(h_new, np.abs(tf-t))
+            if t_new is not None:
+                t = t_new
+                y = y_new
+                t_list.append(t)
+                y_list.append(y)
+                h_list.append(h)
+                self.statistics["nsteps"] += 1
+                h = min(h, np.abs(tf-t))
 
         return ID_PY_OK, t_list, y_list
 
@@ -195,11 +195,10 @@ class BDF3_Newton(FPI.BDF3):
             convergence = self.getNorm(y_np1_ip1)/self.getNorm(y_np1_i) <= 1
 
             if convergence:
-                new_jacobian = 0
-                if(np.linalg.norm(y_np1_ip1-y_np1_i)) <= self.tol:
-                    return t_np1, y_np1_ip1, h
+                if np.linalg.norm(y_np1_ip1 - Y[0]) < self.tol:
+                    return t_np1, y_np1_ip1, h*2
                 else:
-                    y_np1_i = y_np1_ip1
+                    return None, None, h/2
             else:
                 if new_jacobian == 1:
                     h /= 2
