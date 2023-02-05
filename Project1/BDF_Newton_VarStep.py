@@ -182,6 +182,9 @@ class BDF_general(FPI.BDF_general):
 
 
 class BDF2_Newton(BDF_general):
+    """The BDF2 method using Newtons method with variable step size as a corrector.
+    Built on the BDF_general class.
+    """
     def __init__(self, problem):
         """Initiates an instance of BDF_general.
 
@@ -193,6 +196,8 @@ class BDF2_Newton(BDF_general):
 
     def getNewtonFunc(self, Y, H):
         """The BDF2 function to use in the Newton method. Variable step size.
+        The following work by Hiroaki Nishikawa was used for the step sizes:
+        https://www.researchgate.net/publication/351082535_Derivation_of_BDF2BDF3_for_Variable_Step_Size
 
         Args:
             Y ([floats]): 2 previous points.
@@ -210,6 +215,9 @@ class BDF2_Newton(BDF_general):
 
 
 class BDF3_Newton(BDF_general):
+    """The BDF3 method using Newtons method with variable step size as a corrector.
+    Built on the BDF_general class.
+    """
     def __init__(self, problem):
         """Initiates an instance of BDF_general.
 
@@ -221,6 +229,8 @@ class BDF3_Newton(BDF_general):
 
     def getNewtonFunc(self, Y, H):
         """The BDF3 function to use in the Newton method. Variable step size.
+        The following work by Hiroaki Nishikawa was used for the step sizes:
+        https://www.researchgate.net/publication/351082535_Derivation_of_BDF2BDF3_for_Variable_Step_Size
 
         Args:
             Y ([floats]): 3 previous points.
