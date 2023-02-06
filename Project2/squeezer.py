@@ -4,13 +4,15 @@ from assimulo.problem import Implicit_Problem
 # import os
 # from PIL import Image
 from assimulo.solvers.sundials import IDA
+from assimulo.solvers.radau5 import Radau5DAE
+from assimulo.solvers.euler import ImplicitEuler
 import numpy as np
 import scipy.optimize as opt
 
 
 class Seven_bar_mechanism(Implicit_Problem):
 	"""
-	A class which describes the squezzer according to
+	A class which describes the squeezer according to
 	Hairer, Vol. II, p. 533 ff, see also formula (7.11)
 	"""
 	problem_name = 'Woodpecker w/o friction'
@@ -18,8 +20,8 @@ class Seven_bar_mechanism(Implicit_Problem):
 	def __init__(self):
 		self.y0, self.yd0 = self.init_squeezer()
 		self.t0 = 0
-		self.sw0 = np.zeros(len(self.y0))
-		self.sw0[0:7] = np.ones(7)
+		self.algvar = np.zeros(len(self.y0))
+		self.algvar[0:7] = np.ones(7)
 
 	def reset(self):
 		self.y0, self.yd0 = self.init_squeezer()
@@ -48,7 +50,7 @@ class Seven_bar_mechanism(Implicit_Problem):
 	def init_squeezer2(self, y, yp):
 		pass
 
-	def res(self, t, y, yp, sw):
+	def res(self, t, y, yp):
 		"""
 		Residual function of the 7-bar mechanism in
 		Hairer, Vol. II, p. 533 ff, see also formula (7.11)
@@ -139,7 +141,7 @@ class Seven_bar_mechanism(Implicit_Problem):
 		gp[5, 5] = - zf * coomep
 		gp[5, 6] = - zf * coomep - u * siep
 
-		# v1, v2, v3, v4, v5, v6, v7 =
+		# v1, v2, v3, v4, v5, v6, v7 = y[7:14]
 		# gpp = np.zeros(6)
 		# gpp[0] = - rr * cobe * v1**2 + d * cobeth * (v1 + v2)**2 + ss * siga * v3**2
 		# gpp[1] = - rr * sibe * v1**2 + d * sibeth * (v1 + v2)**2 - ss * coga * v3**2
@@ -166,7 +168,12 @@ class Seven_bar_mechanism(Implicit_Problem):
 
 
 if __name__ == "__main__":
+	# problem = Seven_bar_mechanism()
+	# solver = IDA(problem)
+	# solver.simulate(0.03)
+	# solver.plot()
+
 	problem = Seven_bar_mechanism()
-	solver = IDA(problem)
-	solver.simulate(0.03)
+	solver = Radau5DAE(problem)
+	solver.simulate(0.01)
 	solver.plot()
