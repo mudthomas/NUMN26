@@ -1,16 +1,11 @@
-# import assimulo.implicit_ode as ai
 from assimulo.problem import Implicit_Problem
-# import sys
-# import os
-# from PIL import Image
 from assimulo.solvers.sundials import IDA
 from assimulo.solvers.radau5 import Radau5DAE
-from assimulo.solvers.euler import ImplicitEuler
 import numpy as np
 import scipy.optimize as opt
 
 
-class Seven_bar_mechanism(Implicit_Problem):
+class Seven_bar_mechanism_general(Implicit_Problem):
 	"""
 	A class which describes the squeezer according to
 	Hairer, Vol. II, p. 533 ff, see also formula (7.11)
@@ -20,8 +15,9 @@ class Seven_bar_mechanism(Implicit_Problem):
 	def __init__(self):
 		self.y0, self.yd0 = self.init_squeezer()
 		self.t0 = 0
-		self.algvar = np.zeros(len(self.y0))
-		self.algvar[0:7] = np.ones(7)
+		self.algvar = np.ones(len(self.y0))
+		self.rtol = 1.e-6
+		self.atol = 1.e-6 * np.ones(len(self.y0))
 
 	def reset(self):
 		self.y0, self.yd0 = self.init_squeezer()
@@ -46,9 +42,6 @@ class Seven_bar_mechanism(Implicit_Problem):
 			-10666.8329399655854029433719415,       # Thetadotdot
 			0., 0., 0., 0., 0.]), np.zeros((6,))))
 		return y, yp
-
-	def init_squeezer2(self, y, yp):
-		pass
 
 	def res(self, t, y, yp):
 		"""
@@ -141,39 +134,77 @@ class Seven_bar_mechanism(Implicit_Problem):
 		gp[5, 5] = - zf * coomep
 		gp[5, 6] = - zf * coomep - u * siep
 
-		# v1, v2, v3, v4, v5, v6, v7 = y[7:14]
-		# gpp = np.zeros(6)
-		# gpp[0] = - rr * cobe * v1**2 + d * cobeth * (v1 + v2)**2 + ss * siga * v3**2
-		# gpp[1] = - rr * sibe * v1**2 + d * sibeth * (v1 + v2)**2 - ss * coga * v3**2
-		# gpp[2] = - rr * cobe * v1**2 + d * cobeth * (v1 + v2)**2 + e * siphde * (v4 + v5)**2  + zt * code * v5**2
-		# gpp[3] = - rr * sibe * v1 * 2 + d * sibeth * (v1 + v2)**2 - e * cophde * (v4 + v5)**2 + zt * side * v5**2
-		# gpp[4] = - rr * cobe * v1**2 + d * cobeth * (v1 + v2)**2 + zf * coomep * (v6 + v7)**2 + u * siep * v7**2
-		# gpp[5] = - rr * sibe * v1**2 + d * sibeth * (v1 + v2)**2 + zf * siomep * (v6 + v7)**2 - u * coep * v7**2
-
-		#     Index-3 constraint
-		g = np.zeros((6,))
-		g[0] = rr * cobe - d * cobeth - ss * siga - xb
-		g[1] = rr * sibe - d * sibeth + ss * coga - yb
-		g[2] = rr * cobe - d * cobeth - e * siphde - zt * code - xa
-		g[3] = rr * sibe - d * sibeth + e * cophde - zt * side - ya
-		g[4] = rr * cobe - d * cobeth - zf * coomep - u * siep - xa
-		g[5] = rr * sibe - d * sibeth - zf * siomep + u * coep - ya
-
 		#     Construction of the residual
 		res_1 = yp[0:7] - y[7:14]
 		res_2 = np.dot(m, yp[7:14]) - ff[0:7] + np.dot(gp.T, lamb)
-		res_3 = g
+
+		if self.index == 3:
+			#     Index-3 constraint
+			res_3 = np.array([
+				rr * cobe - d * cobeth - ss * siga - xb,
+				rr * sibe - d * sibeth + ss * coga - yb,
+				rr * cobe - d * cobeth - e * siphde - zt * code - xa,
+				rr * sibe - d * sibeth + e * cophde - zt * side - ya,
+				rr * cobe - d * cobeth - zf * coomep - u * siep - xa,
+				rr * sibe - d * sibeth - zf * siomep + u * coep - ya])
+		if self.index == 2:
+			#     Index-2 constraint
+			res_3 = np.dot(gp, y[7:14])
+		if self.index == 1:
+			#     Index-1 constraint
+			v1, v2, v3, v4, v5, v6, v7 = y[7:14]
+			res_3 = np.array([
+				- rr * cobe * v1**2 + d * cobeth * (v1 + v2)**2 + ss * siga * v3**2,
+				- rr * sibe * v1**2 + d * sibeth * (v1 + v2)**2 - ss * coga * v3**2,
+				- rr * cobe * v1**2 + d * cobeth * (v1 + v2)**2 + e * siphde * (v4 + v5)**2  + zt * code * v5**2,
+				- rr * sibe * v1 * 2 + d * sibeth * (v1 + v2)**2 - e * cophde * (v4 + v5)**2 + zt * side * v5**2,
+				- rr * cobe * v1**2 + d * cobeth * (v1 + v2)**2 + zf * coomep * (v6 + v7)**2 + u * siep * v7**2,
+				- rr * sibe * v1**2 + d * sibeth * (v1 + v2)**2 + zf * siomep * (v6 + v7)**2 - u * coep * v7**2])
+			res_3 += np.dot(gp, yp[7:14])
 
 		return np.hstack((res_1, res_2, res_3))
 
 
+class Seven_bar_mechanism_index3(Seven_bar_mechanism_general):
+	def __init__(self):
+		Seven_bar_mechanism_general.__init__(self)
+		self.algvar[7:] = np.zeros(13)
+		self.index = 3
+
+		self.rtol = 1.e-6
+		self.atol = 1.e-6 * np.ones(len(self.y0))
+
+
+class Seven_bar_mechanism_index2(Seven_bar_mechanism_general):
+	def __init__(self):
+		Seven_bar_mechanism_general.__init__(self)
+		self.algvar[14:] = np.zeros(6)
+		self.index = 2
+
+		self.rtol = 1.e-6
+		self.atol = 1.e-6 * np.ones(len(self.y0))
+
+
+class Seven_bar_mechanism_index1(Seven_bar_mechanism_general):
+	def __init__(self):
+		Seven_bar_mechanism_general.__init__(self)
+		self.index = 1
+
+		self.rtol = 1.e-6
+		self.atol = 1.e-6 * np.ones(len(self.y0))
+
+
 if __name__ == "__main__":
-	# problem = Seven_bar_mechanism()
+	import matplotlib.pyplot as plt
+	problem = Seven_bar_mechanism_index2()
+
 	# solver = IDA(problem)
-	# solver.simulate(0.03)
+	solver = Radau5DAE(problem)
+
+	t, y, _ = solver.simulate(0.02)
+	plt.plot(t, np.fmod(y[:, 0:7], 2 * np.pi))
+	plt.ylim(-1, 1)
 	# solver.plot()
 
-	problem = Seven_bar_mechanism()
-	solver = Radau5DAE(problem)
-	solver.simulate(0.01)
-	solver.plot()
+	plt.legend()
+	plt.show()
