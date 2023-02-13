@@ -1,7 +1,6 @@
 from assimulo.problem import Explicit_Problem
 from assimulo.solvers.runge_kutta import RungeKutta4
 import numpy as np
-import scipy.optimize as opt
 
 
 class Seven_bar_mechanism_exp(Explicit_Problem):
@@ -127,9 +126,6 @@ class Seven_bar_mechanism_exp(Explicit_Problem):
 		gp[5, 5] = - zf * coomep
 		gp[5, 6] = - zf * coomep - u * siep
 
-		#     Construction of the residual
-		res_1 = y[7:14]
-
 		v1, v2, v3, v4, v5, v6, v7 = bep, thp, gap, php, dep, omp, epp
 		gqq = np.array([
 			- rr * cobe * v1**2 + d * cobeth * (v1 + v2)**2 + ss * siga * v3**2,
@@ -139,9 +135,9 @@ class Seven_bar_mechanism_exp(Explicit_Problem):
 			- rr * cobe * v1**2 + d * cobeth * (v1 + v2)**2 + zf * coomep * (v6 + v7)**2 + u * siep * v7**2,
 			- rr * sibe * v1**2 + d * sibeth * (v1 + v2)**2 + zf * siomep * (v6 + v7)**2 - u * coep * v7**2])
 
-		res_2 = np.linalg.solve(np.vstack((np.hstack((m, gp.T)), np.hstack((gp, np.zeros((6, 6)))))), np.hstack((ff[0:7], -gqq)))
+		res_2 = np.linalg.solve(np.vstack((np.hstack((m, gp.T)), np.hstack((gp, np.zeros((6, 6)))))), np.hstack((ff, -gqq)))
 
-		return np.hstack((res_1, res_2))
+		return np.hstack((y[7:14], res_2))
 
 
 if __name__ == "__main__":
@@ -154,4 +150,3 @@ if __name__ == "__main__":
 	plt.plot(t, np.fmod(y[:, 0:7], 2 * np.pi))
 	plt.ylim(-1, 1)
 	plt.show()
-
