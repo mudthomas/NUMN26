@@ -147,6 +147,21 @@ if __name__ == "__main__":
 	solver._set_h(0.0001)
 
 	t, y = solver.simulate(0.03)
-	plt.plot(t, np.fmod(y[:, 0:7], 2 * np.pi))
-	plt.ylim(-1, 1)
+	labels = ["$\\beta$", "$\\Theta$", "$\\gamma$", "$\\Phi$", "$\\delta$", "$\\Omega$", "$\\epsilon$"]
+	plt.plot(t, np.fmod(y[:, 0:7], 2 * np.pi), label=labels)
+	plt.ylim(-2, 2)
+	plt.grid()
+	plt.legend(bbox_to_anchor=(1, 1), loc='upper left', borderaxespad=0)
+	plt.show()
+
+	labels = ["$\\dot{\\beta}$", "$\\dot{\\Theta}$", "$\\dot{\\gamma}$", "$\\dot{\\Phi}$", "$\\dot{\\delta}$", "$\\dot{\\Omega}$", "$\\dot{\\epsilon}$"]
+	plt.plot(t, y[:, 7:14], label=labels)
+	plt.grid()
+	plt.legend(bbox_to_anchor=(1, 1), loc='upper left', borderaxespad=0)
+	plt.show()
+
+	labels = ["$\\lambda_1$", "$\\lambda_2$", "$\\lambda_3$", "$\\lambda_4$", "$\\lambda_5$", "$\\lambda_6$"]
+	plt.plot(t, y[:, 14:], label=labels)
+	plt.grid()
+	plt.legend(bbox_to_anchor=(1, 1), loc='upper left', borderaxespad=0)
 	plt.show()

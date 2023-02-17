@@ -40,11 +40,11 @@ class Seven_bar_mechanism_general(Implicit_Problem):
 			-10666.8329399655854029433719415,       # Thetadotdot
 			0., 0., 0., 0., 0.]), np.zeros((6,))))
 
-		# new = opt.fsolve(self.Newton_init, 1e-6*np.ones(13,), args=y)
-		# yp = np.hstack((new[:7], np.array([
-		# 	14222.4439199541138705911625887,        # betadotdot
-		# 	-10666.8329399655854029433719415,       # Thetadotdot
-		# 	0., 0., 0., 0., 0.]), new[7:]))
+		new = opt.fsolve(self.Newton_init, 1e-6*np.ones(13,), args=y)
+		yp = np.hstack((new[:7], np.array([
+			14222.4439199541138705911625887,        # betadotdot
+			-10666.8329399655854029433719415,       # Thetadotdot
+			0., 0., 0., 0., 0.]), new[7:]))
 		return y, yp
 
 	def Newton_init(self, x, y):
@@ -106,8 +106,6 @@ class Seven_bar_mechanism_general(Implicit_Problem):
 		gp[5, 6] = - zf * coomep - u * siep
 
 		return np.vstack((np.hstack((m, gp.T)), np.hstack((gp, np.zeros((6, 6)))))) @ x
-
-
 
 	def res(self, t, y, yp):
 		"""
@@ -262,8 +260,26 @@ if __name__ == "__main__":
 		tol3[7:] = 1.e5 * np.ones(13)
 		solver.atol = tol3
 		t, y, _ = solver.simulate(0.03)
-		plt.plot(t, np.fmod(y[:, 0:7], 2 * np.pi))
-		plt.ylim(-1, 1)
+		labels = ["$\\beta$", "$\\Theta$", "$\\gamma$", "$\\Phi$", "$\\delta$", "$\\Omega$", "$\\epsilon$"]
+		plt.plot(t, np.fmod(y[:, 0:7], 2 * np.pi), label=labels)
+		plt.ylim(-2, 2)
+		plt.title("Index-3, IDA solver")
+		plt.grid()
+		plt.legend(bbox_to_anchor=(1, 1), loc='upper left', borderaxespad=0)
+		plt.show()
+
+		labels = ["$\\dot{\\beta}$", "$\\dot{\\Theta}$", "$\\dot{\\gamma}$", "$\\dot{\\Phi}$", "$\\dot{\\delta}$", "$\\dot{\\Omega}$", "$\\dot{\\epsilon}$"]
+		plt.plot(t, y[:, 7:14], label=labels)
+		plt.title("Index-3, IDA solver")
+		plt.grid()
+		plt.legend(bbox_to_anchor=(1, 1), loc='upper left', borderaxespad=0)
+		plt.show()
+
+		labels = ["$\\lambda_1$", "$\\lambda_2$", "$\\lambda_3$", "$\\lambda_4$", "$\\lambda_5$", "$\\lambda_6$"]
+		plt.plot(t, y[:, 14:], label=labels)
+		plt.title("Index-3, IDA solver")
+		plt.grid()
+		plt.legend(bbox_to_anchor=(1, 1), loc='upper left', borderaxespad=0)
 		plt.show()
 
 	def doIndex2():
@@ -274,8 +290,26 @@ if __name__ == "__main__":
 		tol2[14:] = 1.e5 * np.ones(6)
 		solver.atol = tol2
 		t, y, _ = solver.simulate(0.03)
-		plt.plot(t, np.fmod(y[:, 0:7], 2 * np.pi))
-		plt.ylim(-1, 1)
+		labels = ["$\\beta$", "$\\Theta$", "$\\gamma$", "$\\Phi$", "$\\delta$", "$\\Omega$", "$\\epsilon$"]
+		plt.plot(t, np.fmod(y[:, 0:7], 2 * np.pi), label=labels)
+		plt.ylim(-2, 2)
+		plt.title("Index-2, IDA solver")
+		plt.grid()
+		plt.legend(bbox_to_anchor=(1, 1), loc='upper left', borderaxespad=0)
+		plt.show()
+
+		labels = ["$\\dot{\\beta}$", "$\\dot{\\Theta}$", "$\\dot{\\gamma}$", "$\\dot{\\Phi}$", "$\\dot{\\delta}$", "$\\dot{\\Omega}$", "$\\dot{\\epsilon}$"]
+		plt.plot(t, y[:, 7:14], label=labels)
+		plt.title("Index-2, IDA solver")
+		plt.grid()
+		plt.legend(bbox_to_anchor=(1, 1), loc='upper left', borderaxespad=0)
+		plt.show()
+
+		labels = ["$\\lambda_1$", "$\\lambda_2$", "$\\lambda_3$", "$\\lambda_4$", "$\\lambda_5$", "$\\lambda_6$"]
+		plt.plot(t, y[:, 14:], label=labels)
+		plt.title("Index-2, IDA solver")
+		plt.grid()
+		plt.legend(bbox_to_anchor=(1, 1), loc='upper left', borderaxespad=0)
 		plt.show()
 
 	def doIndex1():
@@ -285,8 +319,29 @@ if __name__ == "__main__":
 		tol1 = 1.e-6 * np.ones(20)
 		solver.atol = tol1
 		t, y, _ = solver.simulate(0.03)
-		plt.plot(t, np.fmod(y[:, 0:7], 2 * np.pi))
-		plt.ylim(-1, 1)
+		labels = ["$\\beta$", "$\\Theta$", "$\\gamma$", "$\\Phi$", "$\\delta$", "$\\Omega$", "$\\epsilon$"]
+		plt.plot(t, np.fmod(y[:, 0:7], 2 * np.pi), label=labels)
+		plt.ylim(-2, 2)
+		plt.title("Index-1, IDA solver")
+		plt.grid()
+		plt.legend(bbox_to_anchor=(1, 1), loc='upper left', borderaxespad=0)
 		plt.show()
 
+		labels = ["$\\dot{\\beta}$", "$\\dot{\\Theta}$", "$\\dot{\\gamma}$", "$\\dot{\\Phi}$", "$\\dot{\\delta}$", "$\\dot{\\Omega}$", "$\\dot{\\epsilon}$"]
+		plt.plot(t, y[:, 7:14], label=labels)
+		plt.title("Index-1, IDA solver")
+		plt.grid()
+		plt.legend(bbox_to_anchor=(1, 1), loc='upper left', borderaxespad=0)
+		plt.show()
+
+		labels = ["$\\lambda_1$", "$\\lambda_2$", "$\\lambda_3$", "$\\lambda_4$", "$\\lambda_5$", "$\\lambda_6$"]
+		plt.plot(t, y[:, 14:], label=labels)
+		plt.title("Index-1, IDA solver")
+		plt.grid()
+		plt.legend(bbox_to_anchor=(1, 1), loc='upper left', borderaxespad=0)
+		plt.show()
+
+
+	doIndex3()
+	doIndex2()
 	doIndex1()
