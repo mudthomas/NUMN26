@@ -4,8 +4,8 @@ import numpy as np
 
 class Explicit_Problem_2nd(Explicit_Problem):
     def __init__(self, y0, yp0):
-    self.t0 = 0
-    self.y0 = np.hstack((y0, yp0))
+        self.t0 = 0
+        self.y0 = np.hstack((y0, yp0))
 
 
 class Explicit_2nd_Order(Explicit_ODE):
