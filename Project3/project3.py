@@ -22,7 +22,6 @@ class Explicit_Problem_2nd(Explicit_Problem):
 
 
 class Explicit_2nd_Order(Explicit_ODE):
-
     def __init__(self, problem):
         Explicit_ODE.__init__(self, problem)
 
@@ -38,9 +37,6 @@ class Explicit_2nd_Order(Explicit_ODE):
 
 
 class Newmark_Exp(Explicit_2nd_Order):
-    # beta = 0
-    # C_mat = 0
-
     tol = 1.e-8
     maxit = 100
     maxsteps = 5000
@@ -87,17 +83,19 @@ class Newmark_Exp(Explicit_2nd_Order):
 class Newmark(Explicit_2nd_Order):
     pass
 
+
 class HHT(Explicit_2nd_Order):
     pass
+
 
 if __name__ == "__main__":
     # When run as main, compares the methods to CVode using the function 'problem_func' as example.
     def problem_func(t, y):
-        temp = spring_constant * (1 - 1/np.sqrt(y[0]**2+y[1]**2))
-        return np.asarray([y[2], y[3], -y[0]*temp, -y[1]*temp - 1])
+        temp = spring_constant * (1 - 1 / np.sqrt(y[0]**2 + y[1]**2))
+        return np.asarray([y[2], y[3], -y[0] * temp, -y[1] * temp - 1])
     spring_constant = 3
 
-    starting_point = np.array([1-1e-6, 0, 0, 0])
+    starting_point = np.array([1 - 1e-6, 0, 0, 0])
     problem = Explicit_Problem(problem_func, y0=starting_point)
     t_end = 3
 
