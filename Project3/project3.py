@@ -1,4 +1,4 @@
-from assimulo.problem import Explicit_Problem
+from assimulo.ode import Explicit_Problem, Explicit_ODE_Exception, ID_PY_OK
 from assimulo.explicit_ode import Explicit_ODE
 import numpy as np
 
@@ -41,12 +41,12 @@ class Newmark_Exp(Explicit_2nd_Order):
     # beta = 0
     # C_mat = 0
 
-    tol=1.e-8
-    maxit=100
-    maxsteps=500
+    tol = 1.e-8
+    maxit = 100
+    maxsteps = 5000
 
     def __init__(self, problem, gamma=0.5):
-        Explicit_ODE.__init__(self, problem)
+        Explicit_2nd_Order.__init__(self, problem)
         self.gamma = gamma
 
         self.options["h"] = 0.01
@@ -54,24 +54,29 @@ class Newmark_Exp(Explicit_2nd_Order):
         self.statistics["nfcns"] = 0
 
     def integrate(self, t, y, tf, opts):
-        u = y[:len(y)//2]
-        up = y[len(y)//2:]
-        upp = self.problem.rhs(t, y)[len(y)//2:]
-
+        u = y[:len(y) // 2]
+        up = y[len(y) // 2:]
+        upp = self.problem.rhs(t, y)[len(y) // 2:]
+        self.statistics["nfcns"] += 1
         y_list = [y]
         t_list = [t]
 
-        h = min([self._get_h(), abs(tf-t)])
+        h = min([self._get_h(), abs(tf - t)])
         t = t + h
-        for i in range(self.maxit):
-            if t > tf:
+        for i in range(self.maxsteps):
+            if t >= tf:
                 break
-            u_np1 = u + up*h + upp * h**2 / 2
-            upp_np1 = self.problem.rhs(t, np.hstack((u, up)))[len(y)//2:]
-            up_np1 = up + upp * h * (1-self.gamma) + upp_np1 * self.gamma * h
-            u, up, upp = u_np1, u_np1, upp_np1
+            self.statistics["nsteps"] += 1
+            u_np1 = u + up * h + 0.5 * upp * h**2
+            temp = np.zeros(len(up))
+            upp_np1 = self.problem.rhs(t, np.hstack((u, temp)))[len(upp):]
+            self.statistics["nfcns"] += 1
+            up_np1 = up + upp * h * (1 - self.gamma) + upp_np1 * self.gamma * h
+            u, up, upp = u_np1, up_np1, upp_np1
             t_list.append(t)
             y_list.append(np.hstack((u, up)))
+            h = min([self._get_h(), abs(tf - t)])
+            t = t + h
 
         else:
             raise Explicit_ODE_Exception('Final time not reached within maximum number of steps')
@@ -94,7 +99,7 @@ if __name__ == "__main__":
 
     starting_point = np.array([1-1e-6, 0, 0, 0])
     problem = Explicit_Problem(problem_func, y0=starting_point)
-    t_end = 10
+    t_end = 3
 
     from assimulo.solvers.sundials import CVode
     problem.name = "CVode"
@@ -104,5 +109,5 @@ if __name__ == "__main__":
 
     problem.name = "Newmark_exp solver"
     solver = Newmark_Exp(problem)
-    solver.simulate(t_end)
+    t, y = solver.simulate(t_end)
     solver.plot()
