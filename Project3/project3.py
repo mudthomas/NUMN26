@@ -45,10 +45,6 @@ class Newmark_Exp(Explicit_2nd_Order):
         Explicit_2nd_Order.__init__(self, problem)
         self.gamma = gamma
 
-        self.options["h"] = 0.01
-        self.statistics["nsteps"] = 0
-        self.statistics["nfcns"] = 0
-
     def integrate(self, t, y, tf, opts):
         u = y[:len(y) // 2]
         up = y[len(y) // 2:]
@@ -81,7 +77,63 @@ class Newmark_Exp(Explicit_2nd_Order):
 
 
 class Newmark(Explicit_2nd_Order):
-    pass
+    tol = 1.e-8
+    maxit = 100
+    maxsteps = 5000
+
+    def __init__(self, problem, beta=0.5, gamma=0.5):
+        Explicit_2nd_Order.__init__(self, problem)
+        self.beta = beta
+        self.gamma = gamma
+
+        self.Mmat = self.problem.Mmat
+        self.Cmat = self.problem.Cmat
+        self.KMat = self.problem.Kmat
+        self.func = self.problem.func
+
+    def integrate(self, t, y, tf, opts):
+        gdb = self.gamma / self.beta
+        u = y[:len(y) // 2]
+        up = y[len(y) // 2:]
+        upp = self.problem.rhs(t, y)[len(y) // 2:]
+        self.statistics["nfcns"] += 1
+
+        y_list = [y]
+        t_list = [t]
+
+        h = min([self._get_h(), abs(tf - t)])
+        t = t + h
+        A = self.Kmat + (self.Mmat / h + self.gamma * self.Cmat) / (self.beta * h)
+        ## A should be redone for last step.
+
+        for i in range(self.maxsteps):
+            if t >= tf:
+                break
+            self.statistics["nsteps"] += 1
+
+            temp = upp * (1 / (2 * self.beta) - 1) + (u / h + up) / (self.beta * h)
+            term2 = np.dot(self.Mmat, temp)
+
+            temp = (gdb / h) * u - (1 - gdb) * up - h * (1 - gdb / 2) * upp
+            term3 = np.dot(self.Cmat, temp)
+
+            u_np1 = np.linalg.solve(A, self.problem.func(t) + term2 + term3)
+            self.statistics["nfcns"] += 1
+
+            up_np1 = ((u_np1 - u) / h) * gdb + up * (1 - gdb) + upp * h * (1 - gdb / 2)
+
+            upp_np1 = (((u_np1 - u) / h) - up) / (h * self.beta) - (1 / (2 * self.beta)) * upp
+
+            u, up, upp = u_np1, up_np1, upp_np1
+            y_list.append()
+            t_list.append(t)
+            h = min([self._get_h(), abs(tf - t)])
+            t = t + h
+
+        else:
+            raise Explicit_ODE_Exception('Final time not reached within maximum number of steps')
+
+        return ID_PY_OK, t_list, y_list
 
 
 class HHT(Explicit_2nd_Order):
@@ -105,7 +157,12 @@ if __name__ == "__main__":
     solver.simulate(t_end)
     solver.plot()
 
-    problem.name = "Newmark_exp solver"
+    problem.name = "Explicit Newmark solver"
     solver = Newmark_Exp(problem)
+    t, y = solver.simulate(t_end)
+    solver.plot()
+
+    problem.name = "Implicit Newmark solver"
+    solver = Newmark(problem)
     t, y = solver.simulate(t_end)
     solver.plot()
