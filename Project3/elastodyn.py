@@ -22,6 +22,8 @@ from dune.fem.space import dgonb as dgSpace
 from dune.fem.operator import galerkin as galerkinOperator
 from dune.fem.operator import linear as linearOperator
 
+from Newmark import Newmark, HHT, Newmark_Exp, Explicit_Problem_2nd
+
 import scipy.sparse as ssp
 import scipy.sparse.linalg as ssl
 pl.close('all')
@@ -115,6 +117,10 @@ class elastodynamic_beam:
 
         print('degrees of freedom: ', self.ndofs)
 
+    def func(self, t):
+        Ft = t*self.F if t < self.cutoff_Tc else np.zeros(self.ndofs)
+        return Ft
+
     def res(self, t, y, yp, ypp):
         if t < self.cutoff_Tc:
             return self.Mass_mat@ypp * self.Stiffness_mat@yp + self.Dampening_mat@y - t*self.F
@@ -122,7 +128,7 @@ class elastodynamic_beam:
             return self.Mass_mat@ypp * self.Stiffness_mat@yp + self.Dampening_mat@y
 
     def rhs(self,t,y):
-        Ft = t*self.F if t < self.cutoff_Tc else np.zeros(self.ndofs)
+        Ft = self.func(t)
         return np.hstack((y[self.ndofs:],
                           ssl.spsolve(self.Mass_mat, -self.Stiffness_mat@y[:self.ndofs]
                                                      -self.Dampening_mat@y[self.ndofs:]
@@ -162,12 +168,13 @@ if __name__ == '__main__':
     import assimulo.ode as aode
 
     # y , ydot
-    beam_problem = aode.Explicit_Problem(beam_class.rhs,y0=np.zeros((2*beam_class.ndofs,)))
+    beam_problem = Explicit_Problem_2nd(y0=np.zeros((beam_class.ndofs,)),yp0=np.zeros((beam_class.ndofs,)), Mmat=beam_class.Mass_mat, Cmat=beam_class.Dampening_mat, Kmat=beam_class.Stiffness_mat, func=beam_class.func)
+
     beam_problem.name='Modified Elastodyn example from DUNE-FEM'
 
-    beamCV = aso.ImplicitEuler(beam_problem) # CVode solver instance
+    beamCV = Newmark(beam_problem) # CVode solver instance
     #beamCV = aso.Radau5ODE(beam_problem)
-    beamCV.h = 0.05 # constant step size here
+    beamCV._set_h(0.05) # constant step size here
     tt, y = beamCV.simulate(t_end)
 
     disp_tip = []
