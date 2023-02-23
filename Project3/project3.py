@@ -80,45 +80,12 @@ class Newmark_Exp(Explicit_2nd_Order):
         return u_np1, up_np1, upp_np1
 
 
-class Newmark(Explicit_2nd_Order):
-    def __init__(self, problem, beta=0.5, gamma=0.5):
-        Explicit_2nd_Order.__init__(self, problem)
-        if not (0.5 <= gamma <= 2 * beta):
-            print("Method is not unconditionally stable.")
-
-        if (gamma == 2 * beta == 0.5):
-            print("Method is second order accurate.")
-        else:
-            print("Method is first order accurate.")
-
-        self.beta = beta
-        self.gamma = gamma
-        self.Mmat = self.problem.Mmat
-        self.Cmat = self.problem.Cmat
-        self.KMat = self.problem.Kmat
-        self.func = self.problem.func
-
-    def step(self, u, up, upp, h, t):
-        gdb = self.gamma / self.beta
-        Amat = self.Kmat + (self.Mmat / h + self.gamma * self.Cmat) / (self.beta * h)
-
-        term2 = np.dot(self.Mmat, upp * (1 / (2 * self.beta) - 1) + (u / h + up) / (self.beta * h))
-        term3 = np.dot(self.Cmat, (gdb / h) * u - (1 - gdb) * up - h * (1 - gdb / 2) * upp)
-
-        u_np1 = np.linalg.solve(Amat, self.problem.func(t) + term2 + term3)
-        self.statistics["nfcns"] += 1
-
-        up_np1 = ((u_np1 - u) / h) * gdb + up * (1 - gdb) + upp * h * (1 - gdb / 2)
-        upp_np1 = (((u_np1 - u) / h) - up) / (h * self.beta) - (1 / (2 * self.beta)) * upp
-        return u_np1, up_np1, upp_np1
-
-
 class HHT(Explicit_2nd_Order):
-    def __init__(self, problem, alpha = 0):
+    def __init__(self, problem, alpha=0):
         Explicit_2nd_Order.__init__(self, problem)
 
         self.alpha = alpha
-        self.beta = (1 - alpha)**2/4
+        self.beta = (1 - alpha)**2 / 4
         self.gamma = 0.5 - alpha
 
         self.Mmat = self.problem.Mmat
@@ -139,6 +106,21 @@ class HHT(Explicit_2nd_Order):
         up_np1 = ((u_np1 - u) / h) * gdb + up * (1 - gdb) + upp * h * (1 - gdb / 2)
         upp_np1 = (((u_np1 - u) / h) - up) / (h * self.beta) - (1 / (2 * self.beta)) * upp
         return u_np1, up_np1, upp_np1
+
+
+class Newmark(HHT):
+    def __init__(self, problem, beta=0.5, gamma=0.5):
+        HHT.__init__(self, problem, alpha=0)
+        self.beta = beta
+        self.gamma = gamma
+
+        if not (0.5 <= gamma <= 2 * beta):
+            print("Method is not unconditionally stable.")
+
+        if (gamma == 2 * beta == 0.5):
+            print("Method is second order accurate.")
+        else:
+            print("Method is first order accurate.")
 
 
 if __name__ == "__main__":
