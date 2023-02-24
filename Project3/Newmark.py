@@ -144,8 +144,3 @@ if __name__ == "__main__":
     solver = Newmark_Exp(problem)
     t, y = solver.simulate(t_end)
     solver.plot()
-
-    problem.name = "Implicit Newmark solver"
-    solver = Newmark(problem)
-    t, y = solver.simulate(t_end)
-    solver.plot()
