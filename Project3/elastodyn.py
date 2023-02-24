@@ -170,11 +170,14 @@ if __name__ == '__main__':
     # y , ydot
     beam_problem = Explicit_Problem_2nd(y0=np.zeros((beam_class.ndofs,)),yp0=np.zeros((beam_class.ndofs,)), Mmat=beam_class.Mass_mat, Cmat=beam_class.Dampening_mat, Kmat=beam_class.Stiffness_mat, func=beam_class.func)
 
-    beam_problem.name='Modified Elastodyn example from DUNE-FEM'
-
-    beamCV = Newmark(beam_problem) # CVode solver instance
-    #beamCV = aso.Radau5ODE(beam_problem)
+    beam_problem.name='Modified Elastodyn example from DUNE-FEM. Solved using HHT.'
+    beamCV = HHT(beam_problem) # HHT solver instance
     beamCV._set_h(0.05) # constant step size here
+
+    # beam_problem.name='Modified Elastodyn example from DUNE-FEM. Solved using Newmark.'
+    # beamCV = Newmark(beam_problem) # Newmark solver instance
+    # beamCV._set_h(0.05) # constant step size here
+
     tt, y = beamCV.simulate(t_end)
 
     disp_tip = []
