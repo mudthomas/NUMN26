@@ -86,7 +86,7 @@ class HHT(Explicit_2nd_Order):
         Explicit_2nd_Order.__init__(self, problem)
 
         self.alpha = alpha
-        self.beta = (1 - alpha)**2 / 4
+        self.beta = ((1 - alpha) / 2)**2
         self.gamma = 0.5 - alpha
 
         self.Mmat = self.problem.Mmat
@@ -96,16 +96,16 @@ class HHT(Explicit_2nd_Order):
 
     def step(self, u, up, upp, h, t):
         gdb = self.gamma / self.beta
-        Amat = self.Kmat * (1 + self.alpha) + (self.Mmat / h + self.gamma * self.Cmat) / (self.beta * h)
+        Amat = self.Mmat / (self.beta * h**2) + self.Cmat * (gdb / h) + self.Kmat * (1 + self.alpha)
 
-        term2 = self.Mmat @ (upp * (1 / (2 * self.beta) - 1) + (u / h + up) / (self.beta * h))
-        term3 = self.Cmat @ ((gdb / h) * u - (1 - gdb) * up - h * (1 - gdb / 2) * upp)
+        term2 = self.Mmat @ (u / (self.beta * h**2) + up / (self.beta * h) + upp * (1 / (2 * self.beta) - 1))
+        term3 = self.Cmat @ (u * (gdb / h) - up * (1 - gdb) - upp * h * (1 - gdb / 2))
         term4 = self.alpha * self.Kmat @ u
 
         u_np1 = sp.sparse.linalg.spsolve(Amat, self.problem.func(t) + term2 + term3 + term4)
         self.statistics["nfcns"] += 1
         up_np1 = ((u_np1 - u) / h) * gdb + up * (1 - gdb) + upp * h * (1 - gdb / 2)
-        upp_np1 = (((u_np1 - u) / h) - up) / (h * self.beta) - (1 / (2 * self.beta)) * upp
+        upp_np1 = (u_np1 - u) / (self.beta * h**2) - up / (self.beta * h) - upp * (1 / (2 * self.beta) - 1 )
         return u_np1, up_np1, upp_np1
 
 
