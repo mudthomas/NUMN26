@@ -232,7 +232,16 @@ if __name__ == '__main__':
         pl.xlabel('t')
         pl.savefig('displacement_compare.png', dpi = 200)
 
-    # tt_1, disp_tip_1 = doCVode(plot=False)
-    # tt_2, disp_tip_2 = doNewmark(plot=False)
-    tt_3, disp_tip_3 = doHHT(plot=True)
+    def plotDiff(t,y1,y2,label,filename):
+        pl.figure()
+        pl.plot(t, [np.abs(y1[i]-y2[i]) for i in range(len(t))], '-b')
+        pl.title(label)
+        pl.xlabel('t')
+        pl.savefig(filename, dpi = 200)
+
+    tt_1, disp_tip_1 = doCVode(plot=False)
+    tt_2, disp_tip_2 = doNewmark(plot=False)
+    tt_3, disp_tip_3 = doHHT(plot=False)
     # doCompare()
+    plotDiff(tt_2, disp_tip_1, disp_tip_2, "Difference in displacement, CVode & Newmark", "Difference_CVode_Newmark.png")
+    plotDiff(tt_2, disp_tip_2, disp_tip_3, "Difference in displacement, Newmark & HHT", "Difference_Newmark_HHT.png")
