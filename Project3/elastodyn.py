@@ -164,33 +164,75 @@ if __name__ == '__main__':
     t_end = 8
     beam_class = elastodynamic_beam(4, T=t_end)
 
-    import assimulo.solvers as aso
-    import assimulo.ode as aode
+    def make_simulation(beam, plot=False):
+        beam._set_h(0.05) # constant step size here
+        tt, y = beam.simulate(t_end)
 
-    # y , ydot
-    beam_problem = Explicit_Problem_2nd(y0=np.zeros((beam_class.ndofs,)),yp0=np.zeros((beam_class.ndofs,)), Mmat=beam_class.Mass_mat, Cmat=beam_class.Dampening_mat, Kmat=beam_class.Stiffness_mat, func=beam_class.func)
+        disp_tip = []
+        plottime = 0
+        plotstep = 0.25
+        for i, t in enumerate(tt):
+            disp_tip.append(beam_class.evaluateAt(y[i], [1, 0.05]))
+            if t > plottime:
+                print(f"Beam position at t={t}")
+                if plot:
+                    beam_class.plotBeam( y[i] )
+                plottime += plotstep
+        return tt, disp_tip
 
-    # beam_problem.name='Modified Elastodyn example from DUNE-FEM. Solved using HHT.'
-    # beamCV = HHT(beam_problem, alpha=0) # HHT solver instance
+    def doCVode(plot=False):
+        import assimulo.solvers as aso
+        import assimulo.ode as aode
+        beam_problem = aode.Explicit_Problem(beam_class.rhs,y0=np.zeros((2*beam_class.ndofs,)))
 
-    beam_problem.name='Modified Elastodyn example from DUNE-FEM. Solved using Newmark.'
-    beamCV = Newmark(beam_problem, beta=0.5, gamma=0.5) # Newmark solver instance
+        beam_problem.name='Modified Elastodyn example from DUNE-FEM'
+        beamCV = aso.ImplicitEuler(beam_problem) # CVode solver instance
+        tt, disp_tip = make_simulation(beamCV, plot)
+        pl.figure()
+        pl.plot(tt, disp_tip, '-b')
+        pl.title('Displacement of beam tip over time')
+        pl.xlabel('t')
+        pl.savefig('displacement_CVode.png', dpi = 200)
+        return tt, disp_tip
 
-    beamCV._set_h(0.05) # constant step size here
-    tt, y = beamCV.simulate(t_end)
+    def doNewmark(plot=False):
+        beam_problem2 = Explicit_Problem_2nd(y0=np.zeros((beam_class.ndofs,)),yp0=np.zeros((beam_class.ndofs,)), Mmat=beam_class.Mass_mat, Cmat=beam_class.Dampening_mat, Kmat=beam_class.Stiffness_mat, func=beam_class.func)
 
-    disp_tip = []
-    plottime = 0
-    plotstep = 0.25
-    for i, t in enumerate(tt):
-        disp_tip.append(beam_class.evaluateAt(y[i], [1, 0.05]))
-        if t > plottime:
-            print(f"Beam position at t={t}")
-            beam_class.plotBeam( y[i] )
-            plottime += plotstep
+        beam_problem2.name='Modified Elastodyn example from DUNE-FEM. Solved using Newmark.'
+        beamNew = Newmark(beam_problem2, beta=0.5, gamma=0.5) # Newmark solver instance
+        tt, disp_tip = make_simulation(beamNew, plot)
+        pl.figure()
+        pl.plot(tt, disp_tip, '-b')
+        pl.title('Displacement of beam tip over time')
+        pl.xlabel('t')
+        pl.savefig('displacement_Newmark.png', dpi = 200)
+        return tt, disp_tip
 
-    pl.figure()
-    pl.plot(tt, disp_tip, '-b')
-    pl.title('Displacement of beam tip over time')
-    pl.xlabel('t')
-    pl.savefig('displacement.png', dpi = 200)
+    def doHHT(plot=False):
+        beam_problem2 = Explicit_Problem_2nd(y0=np.zeros((beam_class.ndofs,)),yp0=np.zeros((beam_class.ndofs,)), Mmat=beam_class.Mass_mat, Cmat=beam_class.Dampening_mat, Kmat=beam_class.Stiffness_mat, func=beam_class.func)
+
+        beam_problem2.name='Modified Elastodyn example from DUNE-FEM. Solved using HHT.'
+        beamHHT = HHT(beam_problem2, alpha=0) # HHT solver instance
+        tt, disp_tip = make_simulation(beamHHT, plot)
+        pl.figure()
+        pl.plot(tt, disp_tip, '-b')
+        pl.title('Displacement of beam tip over time')
+        pl.xlabel('t')
+        pl.savefig('displacement_Newmark.png', dpi = 200)
+        return tt, disp_tip
+
+    def doCompare():
+        fig, axs = pl.subplots(3)
+        fig.suptitle('Displacement of beam tip over time')
+
+        axs[0].plot(tt_1, disp_tip_1, '-b')
+        axs[1].plot(tt_2, disp_tip_2, '-b')
+        axs[2].plot(tt_3, disp_tip_3, '-b')
+
+        pl.xlabel('t')
+        pl.savefig('displacement_compare.png', dpi = 200)
+
+    # tt_1, disp_tip_1 = doCVode(plot=False)
+    # tt_2, disp_tip_2 = doNewmark(plot=False)
+    tt_3, disp_tip_3 = doHHT(plot=True)
+    # doCompare()
