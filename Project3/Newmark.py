@@ -74,8 +74,7 @@ class Newmark_Exp(Explicit_2nd_Order):
 
     def step(self, u, up, upp, h, t):
         u_np1 = u + up * h + 0.5 * upp * h**2
-        temp = np.zeros(len(up))
-        upp_np1 = self.problem.rhs(t, np.hstack((u, temp)))[len(upp):]
+        upp_np1 = self.problem.rhs(t, np.hstack((u, np.zeros(len(up)))))[len(upp):]
         self.statistics["nfcns"] += 1
         up_np1 = up + upp * h * (1 - self.gamma) + upp_np1 * self.gamma * h
         return u_np1, up_np1, upp_np1
