@@ -1,8 +1,8 @@
 from assimulo.ode import Explicit_Problem, Explicit_ODE_Exception, ID_PY_OK
 from assimulo.explicit_ode import Explicit_ODE
 import numpy as np
-
 import scipy as sp
+
 
 class Explicit_Problem_2nd(Explicit_Problem):
     def __init__(self, y0, yp0, Mmat, Cmat, Kmat, func):
@@ -18,7 +18,7 @@ class Explicit_Problem_2nd(Explicit_Problem):
     def rhs(self, t, y):
         u = y[:self.n]
         up = y[self.n:]
-        upp = sp.sparse.linalg.spsolve(self.Mmat, self.Kmat@u + self.Cmat@up + self.func(t))
+        upp = sp.sparse.linalg.spsolve(self.Mmat, self.Kmat @ u + self.Cmat @ up + self.func(t))
         return np.hstack((up, upp))
 
 
@@ -105,7 +105,7 @@ class HHT(Explicit_2nd_Order):
         u_np1 = sp.sparse.linalg.spsolve(Amat, self.problem.func(t) + term2 + term3 + term4)
         self.statistics["nfcns"] += 1
         up_np1 = ((u_np1 - u) / h) * gdb + up * (1 - gdb) + upp * h * (1 - gdb / 2)
-        upp_np1 = (u_np1 - u) / (self.beta * h**2) - up / (self.beta * h) - upp * (1 / (2 * self.beta) - 1 )
+        upp_np1 = (u_np1 - u) / (self.beta * h**2) - up / (self.beta * h) - upp * (1 / (2 * self.beta) - 1)
         return u_np1, up_np1, upp_np1
 
 
