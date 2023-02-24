@@ -104,14 +104,12 @@ class elastodynamic_beam:
 
         # right hand side
         self.External_forces_form = (inner(u, v) - inner(u, v)) * dx + inner(v, pvec) * ds
-
         self.F_ext = galerkinOperator(self.External_forces_form)
 
         self.ndofs = self.V.size
         self.F = np.zeros(self.V.size)
         self.fh = self.V.interpolate(dim * [0], name="fh")
         self.rh = self.V.interpolate(dim * [0], name="rh")
-
         self.F_ext(self.fh, self.rh)
 
         rh_np = self.rh.as_numpy
@@ -199,8 +197,7 @@ if __name__ == '__main__':
         return tt, disp_tip
 
     def doNewmark(plot=False):
-        beam_problem2 = Explicit_Problem_2nd(y0=np.zeros((beam_class.ndofs,)),
-                                             yp0=np.zeros((beam_class.ndofs,)),
+        beam_problem2 = Explicit_Problem_2nd(y0=np.zeros((2 * beam_class.ndofs,)),
                                              Mmat=beam_class.Mass_mat,
                                              Cmat=beam_class.Dampening_mat,
                                              Kmat=beam_class.Stiffness_mat,
@@ -217,8 +214,7 @@ if __name__ == '__main__':
         return tt, disp_tip
 
     def doHHT(plot=False):
-        beam_problem2 = Explicit_Problem_2nd(y0=np.zeros((beam_class.ndofs,)),
-                                             yp0=np.zeros((beam_class.ndofs,)),
+        beam_problem2 = Explicit_Problem_2nd(y0=np.zeros((2 * beam_class.ndofs,)),
                                              Mmat=beam_class.Mass_mat,
                                              Cmat=beam_class.Dampening_mat,
                                              Kmat=beam_class.Stiffness_mat,
@@ -252,11 +248,11 @@ if __name__ == '__main__':
         pl.xlabel('t')
         pl.savefig(filename, dpi=200)
 
-    tt_1, disp_tip_1 = doCVode(plot=False)
-    tt_2, disp_tip_2 = doNewmark(plot=False)
+    # tt_1, disp_tip_1 = doCVode(plot=False)
+    tt_2, disp_tip_2 = doNewmark(plot=True)
     tt_3, disp_tip_3 = doHHT(plot=False)
     # doCompare()
-    plotDiff(tt_2, disp_tip_1, disp_tip_2, "Difference in displacement, CVode & Newmark",
-                                           "Difference_CVode_Newmark.png")
+    # plotDiff(tt_2, disp_tip_1, disp_tip_2, "Difference in displacement, CVode & Newmark",
+                                        #    "Difference_CVode_Newmark.png")
     plotDiff(tt_2, disp_tip_2, disp_tip_3, "Difference in displacement, Newmark & HHT",
                                            "Difference_Newmark_HHT.png")

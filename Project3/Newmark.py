@@ -5,20 +5,19 @@ import scipy as sp
 
 
 class Explicit_Problem_2nd(Explicit_Problem):
-    def __init__(self, y0, yp0, Mmat, Cmat, Kmat, func):
+    def __init__(self, y0, Mmat, Cmat, Kmat, func):
         self.t0 = 0
-        self.y0 = np.hstack((y0, yp0))
+        self.y0 = y0
 
-        self.n = len(y0)
+        self.n = len(y0) // 2
         self.Mmat = Mmat
         self.Cmat = Cmat
         self.Kmat = Kmat
         self.func = func
 
     def rhs(self, t, y):
-        u = y[:self.n]
         up = y[self.n:]
-        upp = sp.sparse.linalg.spsolve(self.Mmat, self.Kmat @ u + self.Cmat @ up + self.func(t))
+        upp = sp.sparse.linalg.spsolve(self.Mmat, self.Kmat @ y[:self.n] + self.Cmat @ up + self.func(t))
         return np.hstack((up, upp))
 
 
@@ -41,30 +40,38 @@ class Explicit_2nd_Order(Explicit_ODE):
         self.options["h"] = float(new_h)
 
     def integrate(self, t, y, tf, opts):
-        u = y[:len(y) // 2]
-        up = y[len(y) // 2:]
-        upp = self.problem.rhs(t, y)[len(y) // 2:]
+        h = min([self._get_h(), abs(tf - t)])
+        u, up, upp = self.step_zero(t, y, h)
         self.statistics["nfcns"] += 1
         y_list = [y]
         t_list = [t]
-
-        h = min([self._get_h(), abs(tf - t)])
-        t = t + h
         for i in range(self.maxsteps):
+            t = t + h
             if t >= tf:
+                h = tf - t_list[-1]
+                u, up, upp = self.last_step(u, up, upp, h, tf)
+                self.statistics["nsteps"] += 1
+                t_list.append(t)
+                y_list.append(np.hstack((u, up)))
                 break
             u, up, upp = self.step(u, up, upp, h, t)
             self.statistics["nsteps"] += 1
-
             t_list.append(t)
             y_list.append(np.hstack((u, up)))
-            h = min([self._get_h(), abs(tf - t)])
-            t = t + h
-
+            h = self._get_h()
         else:
             raise Explicit_ODE_Exception('Final time not reached within maximum number of steps')
 
         return ID_PY_OK, t_list, y_list
+
+    def step_zero(self, t, y, h):
+        u = y[:len(y) // 2]
+        up = y[len(y) // 2:]
+        upp = self.problem.rhs(t, y)[len(y) // 2:]
+        return u, up, upp
+
+    def last_step(self, u, up, upp, h, t):
+        return self.step(u, up, upp, h, t)
 
 
 class Newmark_Exp(Explicit_2nd_Order):
@@ -87,25 +94,30 @@ class HHT(Explicit_2nd_Order):
         self.alpha = alpha
         self.beta = ((1 - alpha) / 2)**2
         self.gamma = 0.5 - alpha
+        self.gdb = self.gamma / self.beta
 
         self.Mmat = self.problem.Mmat
         self.Cmat = self.problem.Cmat
         self.Kmat = self.problem.Kmat
         self.func = self.problem.func
 
+    def step_zero(self, t, y, h):
+        self.Amat = self.Mmat / (self.beta * h**2) + self.Cmat * (self.gdb / h) + self.Kmat * (1 + self.alpha)
+        return Explicit_2nd_Order.step_zero(self, t, y, h)
+
     def step(self, u, up, upp, h, t):
-        gdb = self.gamma / self.beta
-        Amat = self.Mmat / (self.beta * h**2) + self.Cmat * (gdb / h) + self.Kmat * (1 + self.alpha)
-
-        term2 = self.Mmat @ (u / (self.beta * h**2) + up / (self.beta * h) + upp * (1 / (2 * self.beta) - 1))
-        term3 = self.Cmat @ (u * (gdb / h) - up * (1 - gdb) - upp * h * (1 - gdb / 2))
-        term4 = self.alpha * self.Kmat @ u
-
-        u_np1 = sp.sparse.linalg.spsolve(Amat, self.problem.func(t) + term2 + term3 + term4)
+        temp = self.Mmat @ (u / (self.beta * h**2) + up / (self.beta * h) + upp * (1 / (2 * self.beta) - 1))
+        temp += self.Cmat @ (u * (self.gdb / h) - up * (1 - self.gdb) - upp * h * (1 - self.gdb / 2))
+        temp += self.alpha * self.Kmat @ u
+        u_np1 = sp.sparse.linalg.spsolve(self.Amat, self.problem.func(t) + temp)
         self.statistics["nfcns"] += 1
-        up_np1 = ((u_np1 - u) / h) * gdb + up * (1 - gdb) + upp * h * (1 - gdb / 2)
+        up_np1 = ((u_np1 - u) / h) * self.gdb + up * (1 - self.gdb) + upp * h * (1 - self.gdb / 2)
         upp_np1 = (u_np1 - u) / (self.beta * h**2) - up / (self.beta * h) - upp * (1 / (2 * self.beta) - 1)
         return u_np1, up_np1, upp_np1
+
+    def last_step(self, u, up, upp, h, t):
+        self.Amat = self.Mmat / (self.beta * h**2) + self.Cmat * (self.gdb / h) + self.Kmat * (1 + self.alpha)
+        return self.step(u, up, upp, h, t)
 
 
 class Newmark(HHT):
@@ -113,10 +125,10 @@ class Newmark(HHT):
         HHT.__init__(self, problem, alpha=0)
         self.beta = beta
         self.gamma = gamma
+        self.gdb = self.gamma / self.beta
 
         if not (0.5 <= gamma <= 2 * beta):
             print("Method is not unconditionally stable.")
-
         if (gamma == 2 * beta == 0.5):
             print("Method is second order accurate.")
         else:
