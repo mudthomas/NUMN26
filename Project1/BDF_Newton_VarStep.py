@@ -26,23 +26,7 @@ class BDF_general(FPI.BDF_general):
         self.statistics["nsteps"] = 0
         self.statistics["nfcns"] = 0
         self.rtol = self.tol
-        self.atol = np.ones(len(problem.y0))*self.tol
-
-    def _set_h(self, h):
-        """Set the step size.
-
-        Args:
-            h (float-like): New step size.
-        """
-        self.options["h"] = float(h)
-
-    def _get_h(self):
-        """Returns the step size.
-
-        Returns:
-            float: The current step size.
-        """
-        return self.options["h"]
+        self.atol = np.ones(len(problem.y0)) * self.tol
 
     def getJacobian(self, t_np1, point, Newton_func, evaluation=None, finite_diff=1.e-8):
         """Finds the jacobian using finite differences.
@@ -65,7 +49,7 @@ class BDF_general(FPI.BDF_general):
         for j in range(len(point)):
             shift = np.zeros(len(point))
             shift[j] = finite_diff
-            jacobian[:, j] = (Newton_func(t_np1, point + shift) - evaluation)/finite_diff
+            jacobian[:, j] = (Newton_func(t_np1, point + shift) - evaluation) / finite_diff
             self.statistics["nfcns"] += 1
         return jacobian
 
@@ -81,7 +65,7 @@ class BDF_general(FPI.BDF_general):
         ret = 0
         for i in range(len(y)):
             W = self.rtol * np.abs(y[i]) + self.atol[i]
-            ret += (y[i]/W)**2
+            ret += (y[i] / W)**2
         ret /= len(y)
         return np.sqrt(ret)
 
@@ -104,29 +88,31 @@ class BDF_general(FPI.BDF_general):
         t_list = [t0]
         y_list = [y0]
 
-        h = min(self._get_h(), np.abs(tf-t0))
+        h = min(self._get_h(), np.abs(tf - t0))
         self.statistics["nsteps"] += 1
         t, y = self.EEstep(t0, y0, h)
         t_list.append(t)
         y_list.append(y)
         h_list.append(h)
 
-        h = min(h, np.abs(tf-t))
+        h = min(h, np.abs(tf - t))
         for i in range(1, self.order):
+            if t >= tf:
+                break
             self.statistics["nsteps"] += 1
             t, y = self.BDFstep_general(t, y_list[::-1], h)
             t_list.append(t)
             y_list.append(y)
             h_list.append(h)
-            h = min(h, np.abs(tf-t))
+            h = min(h, np.abs(tf - t))
 
-        while(self.statistics["nsteps"] < self.maxsteps-1):
+        while self.statistics["nsteps"] < self.maxsteps - 1:
             if h < 1.e-14:
                 print("h too small.")
                 break
             if t >= tf:
                 break
-            t_new, y_new, h = self.BDFstep_Newton(t, y_list[-self.order:][::-1], h, h_list[-(self.order-1):][::-1])
+            t_new, y_new, h = self.BDFstep_Newton(t, y_list[-self.order:][::-1], h, h_list[-(self.order - 1):][::-1])
 
             if t_new is not None:
                 t = t_new
@@ -135,7 +121,7 @@ class BDF_general(FPI.BDF_general):
                 y_list.append(y)
                 h_list.append(h)
                 self.statistics["nsteps"] += 1
-                h = min(h, np.abs(tf-t))
+                h = min(h, np.abs(tf - t))
 
         return ID_PY_OK, t_list, y_list
 
@@ -165,11 +151,11 @@ class BDF_general(FPI.BDF_general):
         for i in range(self.maxit):
             self.statistics["nfcns"] += 1
             y_np1_ip1 = y_np1_i - np.linalg.solve(jacobian, y_np1_i)
-            if self.getNorm(y_np1_ip1)/self.getNorm(y_np1_i) < 1:
+            if self.getNorm(y_np1_ip1) / self.getNorm(y_np1_i) < 1:
                 if np.linalg.norm(y_np1_ip1 - Y[0]) < self.tol:
-                    return t_np1, y_np1_ip1, h*2
+                    return t_np1, y_np1_ip1, h * 2
                 else:
-                    return None, None, h/2
+                    return None, None, h / 2
             else:
                 if new_jacobian:
                     h /= 2
@@ -208,10 +194,10 @@ class BDF2_Newton(BDF_general):
         """
         h_nm1 = H[0]
         y_n, y_nm1 = Y
-        a_np1 = lambda h: (h_nm1+2*h)/(h*(h_nm1 + h))
-        a_nm1 = lambda h: h/(h_nm1 * (h + h_nm1))
+        a_np1 = lambda h: (h_nm1 + 2 * h) / (h * (h_nm1 + h))
+        a_nm1 = lambda h: h / (h_nm1 * (h + h_nm1))
         a_n = lambda h: - a_np1(h) - a_nm1(h)
-        return lambda t, y, h: a_np1(h) * y + a_n(h)*y_n + a_nm1(h)*y_nm1 - self.problem.rhs(t, y)
+        return lambda t, y, h: a_np1(h) * y + a_n(h) * y_n + a_nm1(h) * y_nm1 - self.problem.rhs(t, y)
 
 
 class BDF3_Newton(BDF_general):
@@ -241,19 +227,19 @@ class BDF3_Newton(BDF_general):
         """
         h_nm1, h_nm2 = H
         y_n, y_nm1, y_nm2 = Y
-        a_n = lambda h: - ((h + h_nm1) * (h + h_nm1 + h_nm2))/(h*h_nm1*(h_nm1+h_nm2))
-        a_nm1 = lambda h: (h * (h + h_nm1 + h_nm2))/(h_nm1 * h_nm2 * (h + h_nm1))
-        a_nm2 = lambda h: - (h * (h + h_nm1))/(h_nm2 * (h_nm1 + h_nm2) * (h + h_nm1 + h_nm2))
+        a_n = lambda h: - ((h + h_nm1) * (h + h_nm1 + h_nm2)) / (h * h_nm1 * (h_nm1 + h_nm2))
+        a_nm1 = lambda h: (h * (h + h_nm1 + h_nm2)) / (h_nm1 * h_nm2 * (h + h_nm1))
+        a_nm2 = lambda h: - (h * (h + h_nm1)) / (h_nm2 * (h_nm1 + h_nm2) * (h + h_nm1 + h_nm2))
         a_np1 = lambda h: - (a_n(h) + a_nm1(h) + a_nm2(h))
-        return lambda t, y, h: a_np1(h)*y + a_n(h)*y_n + a_nm1(h)*y_nm1 + a_nm2(h)*y_nm2 - self.problem.rhs(t, y)
+        return lambda t, y, h: a_np1(h) * y + a_n(h) * y_n + a_nm1(h) * y_nm1 + a_nm2(h) * y_nm2 - self.problem.rhs(t, y)
 
 
 if __name__ == "__main__":
     # When run as main, compares the methods to CVode using the function 'problem_func' as example.
     def problem_func(t, y):
-        temp = spring_constant * (1 - 1/np.sqrt(y[0]**2+y[1]**2))
-        return np.asarray([y[2], y[3], -y[0]*temp, -y[1]*temp - 1])
-    spring_constant = 500
+        temp = spring_constant * (1 - 1 / np.sqrt(y[0]**2 + y[1]**2))
+        return np.asarray([y[2], y[3], -y[0] * temp, -y[1] * temp - 1])
+    spring_constant = 3
 
     starting_point = np.array([1, 0, 0, 0])
     problem = Explicit_Problem(problem_func, y0=starting_point)
