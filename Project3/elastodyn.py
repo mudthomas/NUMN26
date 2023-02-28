@@ -40,8 +40,8 @@ class elastodynamic_beam:
     rho = Constant(1., name="rho")
 
     # Rayleigh damping coefficients
-    eta_m = Constant(0., name="eta_m")
-    eta_k = Constant(0., name="eta_k")
+    eta_m = Constant(3., name="eta_m")
+    eta_k = Constant(-1., name="eta_k")
 
     def __init__(self, gridsize, T=4., dimgrid=2):
 
@@ -221,13 +221,13 @@ if __name__ == '__main__':
                                              func=beam_class.func)
 
         beam_problem2.name = 'Modified Elastodyn example from DUNE-FEM. Solved using HHT.'
-        beamHHT = HHT(beam_problem2, alpha=0)  # HHT solver instance
+        beamHHT = HHT(beam_problem2, alpha=-1e-2)  # HHT solver instance
         tt, disp_tip = make_simulation(beamHHT, plot)
         pl.figure()
         pl.plot(tt, disp_tip, '-b')
         pl.title('Displacement of beam tip over time')
         pl.xlabel('t')
-        pl.savefig('displacement_Newmark.png', dpi=200)
+        pl.savefig('displacement_HHT.png', dpi=200)
         return tt, disp_tip
 
     def doCompare():
@@ -249,10 +249,10 @@ if __name__ == '__main__':
         pl.savefig(filename, dpi=200)
 
     # tt_1, disp_tip_1 = doCVode(plot=False)
-    tt_2, disp_tip_2 = doNewmark(plot=True)
+    tt_2, disp_tip_2 = doNewmark(plot=False)
     tt_3, disp_tip_3 = doHHT(plot=False)
     # doCompare()
     # plotDiff(tt_2, disp_tip_1, disp_tip_2, "Difference in displacement, CVode & Newmark",
                                         #    "Difference_CVode_Newmark.png")
-    plotDiff(tt_2, disp_tip_2, disp_tip_3, "Difference in displacement, Newmark & HHT",
-                                           "Difference_Newmark_HHT.png")
+    # plotDiff(tt_2, disp_tip_2, disp_tip_3, "Difference in displacement, Newmark & HHT",
+                                        #    "Difference_Newmark_HHT.png")
