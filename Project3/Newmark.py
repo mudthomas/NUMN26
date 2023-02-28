@@ -9,16 +9,16 @@ class Explicit_Problem_2nd(Explicit_Problem):
         self.t0 = 0
         self.y0 = y0
 
-        self.n = len(y0) // 2
         self.Mmat = Mmat
         self.Cmat = Cmat
         self.Kmat = Kmat
         self.func = func
 
     def rhs(self, t, y):
-        up = y[self.n:]
-        upp = sp.sparse.linalg.spsolve(self.Mmat, self.Kmat @ y[:self.n] + self.Cmat @ up + self.func(t))
-        return np.hstack((up, upp))
+        up = y[len(y) // 2:]
+        return np.hstack((up,
+                          sp.sparse.linalg.spsolve(self.Mmat,
+                                                   self.Kmat @ y[:len(y) // 2] + self.Cmat @ up + self.func(t))))
 
 
 class Explicit_2nd_Order(Explicit_ODE):
